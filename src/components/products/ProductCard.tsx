@@ -18,8 +18,9 @@ export default function ProductCard({
   onDelete,
   onRecordPurchase,
 }: ProductCardProps) {
-  const stock = product.currentStock;
-  const minStock = product.minStock || 5;
+  const stock = Number(product.currentStock) || 0;
+  const minStock = Number(product.minStock) || 5;
+  const sellingPrice = (Number(product.sellingPrice) || 0).toFixed(2);
 
   let stockBadgeColor = 'bg-[#00aeef] text-white';
   let stockBadgeText = 'In Stock';
@@ -68,7 +69,7 @@ export default function ProductCard({
           <div className="pt-2 flex items-baseline justify-between border-t border-slate-100">
             <div>
               <span className="text-lg font-extrabold text-[#00aeef]">
-                ₹{product.sellingPrice?.toFixed(2)}
+                ₹{sellingPrice}
               </span>
               <span className="text-[10px] text-slate-400 ml-1">/ {product.unit}</span>
             </div>

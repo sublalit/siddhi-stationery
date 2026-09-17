@@ -38,6 +38,9 @@ export default function ViewProductModal({
   const maxStock = product.maxStock ?? 500;
   const unit = product.unit || 'units';
 
+  const sellingPrice = (Number(product.sellingPrice) || 0).toFixed(2);
+  const costPrice = (Number(product.costPrice) || 0).toFixed(2);
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150 relative">
@@ -87,13 +90,13 @@ export default function ViewProductModal({
             <div>
               <span className="text-slate-500 font-semibold block mb-0.5">Selling Price</span>
               <span className="text-sm font-extrabold text-[#00aeef]">
-                ₹{product.sellingPrice?.toFixed(2)}
+                ₹{sellingPrice}
               </span>
             </div>
             <div>
               <span className="text-slate-500 font-semibold block mb-0.5">Cost Price</span>
               <span className="text-sm font-medium text-slate-800">
-                ₹{product.costPrice?.toFixed(2)}
+                ₹{costPrice}
               </span>
             </div>
           </div>

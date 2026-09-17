@@ -27,6 +27,7 @@ export async function getProducts(search?: string, categoryId?: string, stockSta
       result = result.filter((p) => p.category?._id === categoryId);
     }
     if (stockStatus && stockStatus !== 'all') {
+      if (stockStatus === 'in-stock') result = result.filter((p) => p.currentStock > 5);
       if (stockStatus === 'low-stock') result = result.filter((p) => p.currentStock <= (p.minStock || 5));
       if (stockStatus === 'out-of-stock') result = result.filter((p) => p.currentStock === 0);
     }
@@ -63,24 +64,25 @@ export async function getProducts(search?: string, categoryId?: string, stockSta
 export async function createProduct(data: any) {
   const conn = await dbConnect();
 
+  const newP: any = {
+    _id: `prod-${Date.now()}`,
+    name: data.name,
+    sku: data.sku,
+    barcode: data.barcode || `890${Math.floor(100000000 + Math.random() * 900000000)}`,
+    category: { _id: data.category || 'cat-1', name: 'General', slug: 'general' },
+    currentStock: Number(data.currentStock) || 0,
+    minStock: Number(data.minStock) || 5,
+    maxStock: Number(data.maxStock) || 500,
+    sellingPrice: Number(data.sellingPrice) || 0,
+    costPrice: Number(data.costPrice) || 0,
+    unit: data.unit || 'units',
+    rackLocation: data.rackLocation || 'A1-B1-S1',
+    imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&auto=format&fit=crop',
+    description: data.description || '',
+    isCustomPrinting: data.isCustomPrinting || false,
+  };
+
   if (!conn) {
-    const newP: any = {
-      _id: `prod-${Date.now()}`,
-      name: data.name,
-      sku: data.sku,
-      barcode: data.barcode || `890${Math.floor(100000000 + Math.random() * 900000000)}`,
-      category: { _id: data.category || 'cat-1', name: 'General', slug: 'general' },
-      currentStock: Number(data.currentStock) || 0,
-      minStock: Number(data.minStock) || 5,
-      maxStock: Number(data.maxStock) || 500,
-      sellingPrice: Number(data.sellingPrice) || 0,
-      costPrice: Number(data.costPrice) || 0,
-      unit: data.unit || 'units',
-      rackLocation: data.rackLocation || 'A1-B1-S1',
-      imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&auto=format&fit=crop',
-      description: data.description || '',
-      isCustomPrinting: data.isCustomPrinting || false,
-    };
     memoryProducts.unshift(newP);
     revalidatePath('/products');
     revalidatePath('/');
@@ -130,7 +132,20 @@ export async function updateProduct(id: string, data: any) {
   if (!conn) {
     const idx = memoryProducts.findIndex((p) => p._id === id);
     if (idx !== -1) {
-      memoryProducts[idx] = { ...memoryProducts[idx], ...data };
+      memoryProducts[idx] = {
+        ...memoryProducts[idx],
+        name: data.name,
+        sku: data.sku,
+        barcode: data.barcode,
+        currentStock: Number(data.currentStock),
+        minStock: Number(data.minStock),
+        sellingPrice: Number(data.sellingPrice),
+        costPrice: Number(data.costPrice),
+        unit: data.unit,
+        rackLocation: data.rackLocation,
+        imageUrl: data.imageUrl,
+        description: data.description,
+      };
     }
     revalidatePath('/products');
     revalidatePath('/');

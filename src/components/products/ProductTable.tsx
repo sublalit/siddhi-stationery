@@ -36,8 +36,10 @@ export default function ProductTable({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {products.map((p) => {
-              const stock = p.currentStock;
-              const minStock = p.minStock || 5;
+              const stock = Number(p.currentStock) || 0;
+              const minStock = Number(p.minStock) || 5;
+              const sellingPrice = (Number(p.sellingPrice) || 0).toFixed(2);
+              const costPrice = (Number(p.costPrice) || 0).toFixed(2);
 
               let badgeBg = 'bg-[#00aeef] text-white';
               let badgeLabel = 'In Stock';
@@ -78,10 +80,10 @@ export default function ProductTable({
                     </span>
                   </td>
                   <td className="py-3 px-4 font-bold text-[#00aeef]">
-                    ₹{p.sellingPrice?.toFixed(2)}
+                    ₹{sellingPrice}
                   </td>
                   <td className="py-3 px-4 font-medium text-slate-500">
-                    ₹{p.costPrice?.toFixed(2)}
+                    ₹{costPrice}
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
