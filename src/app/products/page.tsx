@@ -17,6 +17,7 @@ import ProductCard from '@/components/products/ProductCard';
 import ProductTable from '@/components/products/ProductTable';
 import AddProductModal from '@/components/products/AddProductModal';
 import RecordPurchaseModal from '@/components/products/RecordPurchaseModal';
+import ViewProductModal from '@/components/products/ViewProductModal';
 import {
   getProducts,
   createProduct,
@@ -46,6 +47,7 @@ function ProductsContent() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [purchasingProduct, setPurchasingProduct] = useState<any | null>(null);
+  const [viewingProduct, setViewingProduct] = useState<any | null>(null);
 
   useEffect(() => {
     if (initialStockParam !== 'all') setSelectedStock(initialStockParam);
@@ -159,7 +161,7 @@ function ProductsContent() {
         </div>
       </div>
 
-      {/* Filter Bar (Search input, Category filter, Stock status filter, View Switcher) */}
+      {/* Filter Bar */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Search */}
         <div className="relative w-full md:w-80">
@@ -257,6 +259,7 @@ function ProductsContent() {
             <ProductCard
               key={p._id}
               product={p}
+              onView={(prod) => setViewingProduct(prod)}
               onEdit={(prod) => {
                 setEditingProduct(prod);
                 setIsAddModalOpen(true);
@@ -269,6 +272,7 @@ function ProductsContent() {
       ) : (
         <ProductTable
           products={products}
+          onView={(prod) => setViewingProduct(prod)}
           onEdit={(prod) => {
             setEditingProduct(prod);
             setIsAddModalOpen(true);
@@ -279,6 +283,12 @@ function ProductsContent() {
       )}
 
       {/* Modals */}
+      <ViewProductModal
+        isOpen={!!viewingProduct}
+        onClose={() => setViewingProduct(null)}
+        product={viewingProduct}
+      />
+
       <AddProductModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

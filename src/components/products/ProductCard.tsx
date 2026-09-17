@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
-import { Eye, Edit3, Trash2, ShoppingCart, TrendingUp } from 'lucide-react';
+import { Eye, Edit3, Trash2, ShoppingCart } from 'lucide-react';
 
 interface ProductCardProps {
   product: any;
+  onView: (product: any) => void;
   onEdit: (product: any) => void;
   onDelete: (id: string) => void;
   onRecordPurchase: (product: any) => void;
@@ -13,6 +13,7 @@ interface ProductCardProps {
 
 export default function ProductCard({
   product,
+  onView,
   onEdit,
   onDelete,
   onRecordPurchase,
@@ -76,12 +77,12 @@ export default function ProductCard({
         </div>
       </div>
 
-      {/* Action Buttons matching Lovable prototype (View, Edit, Delete, Record Purchase) */}
+      {/* Action Buttons matching Lovable prototype */}
       <div className="p-4 pt-0 space-y-2 border-t border-slate-100 bg-slate-50/50">
         <div className="grid grid-cols-3 gap-2 pt-3">
           <button
-            onClick={() => onEdit(product)}
-            className="flex items-center justify-center gap-1 py-1.5 px-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+            onClick={() => onView(product)}
+            className="flex items-center justify-center gap-1 py-1.5 px-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-cyan-50 hover:text-[#00aeef] transition-colors"
           >
             <Eye className="w-3.5 h-3.5 text-slate-500" />
             <span>View</span>

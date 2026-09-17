@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Edit3, Trash2, ShoppingCart } from 'lucide-react';
+import { Eye, Edit3, Trash2, ShoppingCart } from 'lucide-react';
 
 interface ProductTableProps {
   products: any[];
+  onView: (product: any) => void;
   onEdit: (product: any) => void;
   onDelete: (id: string) => void;
   onRecordPurchase: (product: any) => void;
@@ -12,6 +13,7 @@ interface ProductTableProps {
 
 export default function ProductTable({
   products,
+  onView,
   onEdit,
   onDelete,
   onRecordPurchase,
@@ -84,8 +86,15 @@ export default function ProductTable({
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => onRecordPurchase(p)}
+                        onClick={() => onView(p)}
                         className="p-1.5 rounded-lg bg-cyan-50 text-[#00aeef] hover:bg-cyan-100 transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onRecordPurchase(p)}
+                        className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
                         title="Record Purchase Intake"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
