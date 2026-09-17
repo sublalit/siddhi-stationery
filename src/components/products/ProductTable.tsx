@@ -1,14 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Eye, Edit3, Trash2, ShoppingCart } from 'lucide-react';
+import { Eye, Edit3, Trash2, Clock, TrendingUp } from 'lucide-react';
 
 interface ProductTableProps {
   products: any[];
   onView: (product: any) => void;
   onEdit: (product: any) => void;
   onDelete: (id: string) => void;
-  onRecordPurchase: (product: any) => void;
+  onOpenPurchases: (product: any) => void;
+  onOpenPrices: (product: any) => void;
 }
 
 export default function ProductTable({
@@ -16,7 +17,8 @@ export default function ProductTable({
   onView,
   onEdit,
   onDelete,
-  onRecordPurchase,
+  onOpenPurchases,
+  onOpenPrices,
 }: ProductTableProps) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
@@ -60,7 +62,9 @@ export default function ProductTable({
                       className="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0"
                     />
                     <div>
-                      <div className="line-clamp-1">{p.name}</div>
+                      <div className="line-clamp-1 font-bold text-[#00aeef] cursor-pointer hover:underline" onClick={() => onView(p)}>
+                        {p.name}
+                      </div>
                       {p.isCustomPrinting && (
                         <span className="text-[10px] text-cyan-600 font-semibold">Custom Printing</span>
                       )}
@@ -71,12 +75,12 @@ export default function ProductTable({
                     <div className="text-[10px] text-slate-400">{p.barcode}</div>
                   </td>
                   <td className="py-3 px-4 font-medium text-slate-700">
-                    {p.category?.name || 'General'}
+                    {p.category?.name || 'Paper Products'}
                   </td>
                   <td className="py-3 px-4 font-mono text-slate-500">{p.rackLocation || 'A1-B1'}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeBg}`}>
-                      {stock} {p.unit} ({badgeLabel})
+                      {stock} {p.unit || 'units'} ({badgeLabel})
                     </span>
                   </td>
                   <td className="py-3 px-4 font-bold text-[#00aeef]">
@@ -95,11 +99,18 @@ export default function ProductTable({
                         <Eye className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => onRecordPurchase(p)}
-                        className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                        title="Record Purchase Intake"
+                        onClick={() => onOpenPurchases(p)}
+                        className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                        title="Purchases History"
                       >
-                        <ShoppingCart className="w-3.5 h-3.5" />
+                        <Clock className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onOpenPrices(p)}
+                        className="p-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                        title="Price History"
+                      >
+                        <TrendingUp className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => onEdit(p)}

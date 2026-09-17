@@ -18,6 +18,8 @@ import ProductTable from '@/components/products/ProductTable';
 import AddProductModal from '@/components/products/AddProductModal';
 import RecordPurchaseModal from '@/components/products/RecordPurchaseModal';
 import ViewProductModal from '@/components/products/ViewProductModal';
+import PurchaseHistoryModal from '@/components/products/PurchaseHistoryModal';
+import PriceHistoryModal from '@/components/products/PriceHistoryModal';
 import {
   getProducts,
   createProduct,
@@ -47,7 +49,10 @@ function ProductsContent() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [purchasingProduct, setPurchasingProduct] = useState<any | null>(null);
+  const [isRecordPurchaseOpen, setIsRecordPurchaseOpen] = useState(false);
   const [viewingProduct, setViewingProduct] = useState<any | null>(null);
+  const [purchasesModalProduct, setPurchasesModalProduct] = useState<any | null>(null);
+  const [pricesModalProduct, setPricesModalProduct] = useState<any | null>(null);
 
   useEffect(() => {
     if (initialStockParam !== 'all') setSelectedStock(initialStockParam);
@@ -109,7 +114,8 @@ function ProductsContent() {
   const handleRecordPurchaseSave = async (
     productId: string,
     quantity: number,
-    costPrice: number
+    costPrice: number,
+    supplier?: string
   ) => {
     await recordPurchase(productId, quantity, costPrice);
     await fetchProductData();
@@ -127,7 +133,7 @@ function ProductsContent() {
         <span className="text-slate-800 font-semibold">Products</span>
       </div>
 
-      {/* Header & Main Actions */}
+      {/* Header & Main Actions matching Lovable prototype screenshot */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Products</h1>
@@ -142,6 +148,7 @@ function ProductsContent() {
           <button
             onClick={() => {
               if (products.length > 0) setPurchasingProduct(products[0]);
+              setIsRecordPurchaseOpen(true);
             }}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
           >
@@ -265,7 +272,8 @@ function ProductsContent() {
                 setIsAddModalOpen(true);
               }}
               onDelete={handleDeleteProduct}
-              onRecordPurchase={(prod) => setPurchasingProduct(prod)}
+              onOpenPurchases={(prod) => setPurchasesModalProduct(prod)}
+              onOpenPrices={(prod) => setPricesModalProduct(prod)}
             />
           ))}
         </div>
@@ -278,7 +286,8 @@ function ProductsContent() {
             setIsAddModalOpen(true);
           }}
           onDelete={handleDeleteProduct}
-          onRecordPurchase={(prod) => setPurchasingProduct(prod)}
+          onOpenPurchases={(prod) => setPurchasesModalProduct(prod)}
+          onOpenPrices={(prod) => setPricesModalProduct(prod)}
         />
       )}
 
@@ -287,6 +296,18 @@ function ProductsContent() {
         isOpen={!!viewingProduct}
         onClose={() => setViewingProduct(null)}
         product={viewingProduct}
+      />
+
+      <PurchaseHistoryModal
+        isOpen={!!purchasesModalProduct}
+        onClose={() => setPurchasesModalProduct(null)}
+        product={purchasesModalProduct}
+      />
+
+      <PriceHistoryModal
+        isOpen={!!pricesModalProduct}
+        onClose={() => setPricesModalProduct(null)}
+        product={pricesModalProduct}
       />
 
       <AddProductModal
@@ -299,9 +320,13 @@ function ProductsContent() {
       />
 
       <RecordPurchaseModal
-        isOpen={!!purchasingProduct}
-        onClose={() => setPurchasingProduct(null)}
+        isOpen={isRecordPurchaseOpen || !!purchasingProduct}
+        onClose={() => {
+          setIsRecordPurchaseOpen(false);
+          setPurchasingProduct(null);
+        }}
         product={purchasingProduct}
+        products={products}
         onSave={handleRecordPurchaseSave}
       />
     </div>
