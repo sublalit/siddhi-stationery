@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Home, ChevronRight, Printer, Eye, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { FileText, Plus, Home, ChevronRight, Printer, Eye, CheckCircle2, Clock, AlertCircle, X } from 'lucide-react';
 import CreateInvoiceModal from '@/components/invoices/CreateInvoiceModal';
 import { getInvoices, createInvoice, updateInvoiceStatus } from '@/lib/actions/invoices';
 import { getProducts } from '@/lib/actions/products';
