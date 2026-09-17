@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FolderTree, Plus, Home, ChevronRight, Edit3, Trash2, Package, X } from 'lucide-react';
+import { FolderTree, Plus, Home, ChevronRight, Package, X } from 'lucide-react';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
 
@@ -28,19 +29,24 @@ export default function CategoriesPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) return;
     try {
+      setSubmitting(true);
       const res = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
         setIsModalOpen(false);
         setFormData({ name: '', description: '' });
-        fetchCategories();
+        await fetchCategories();
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -99,13 +105,17 @@ export default function CategoriesPage() {
         ))}
       </div>
 
+      {/* Add New Category Modal matching screenshot */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-900">Add New Category</h3>
-              <button onClick={() => setIsModalOpen(false)}>
-                <X className="w-5 h-5 text-slate-400 hover:text-slate-600" />
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
             <form onSubmit={handleCreate} className="space-y-4 pt-4 text-xs">
@@ -116,8 +126,8 @@ export default function CategoriesPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Art & Craft Supplies"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-[#00aeef]"
+                  placeholder="e.g. Ball pen"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-[#00aeef] text-xs font-medium"
                 />
               </div>
               <div>
@@ -126,23 +136,24 @@ export default function CategoriesPage() {
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Category details..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-[#00aeef]"
+                  placeholder="Price 10..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-[#00aeef] text-xs font-medium"
                 />
               </div>
               <div className="flex justify-end gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl font-semibold text-slate-600"
+                  className="px-5 py-2 rounded-xl border border-slate-300 font-bold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-gradient-to-r from-[#00aeef] to-[#0284c7] text-white font-bold rounded-xl"
+                  disabled={submitting}
+                  className="px-6 py-2.5 bg-[#00aeef] hover:bg-[#0284c7] text-white font-bold rounded-xl shadow-xs transition-colors disabled:opacity-50"
                 >
-                  Save Category
+                  {submitting ? 'Saving...' : 'Save Category'}
                 </button>
               </div>
             </form>
