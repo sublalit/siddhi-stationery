@@ -2,17 +2,10 @@ import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/siddhistationery';
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-}
-
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development and serverless invocations in production (Vercel).
- */
 interface GlobalMongoose {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
+  isFallback: boolean;
 }
 
 declare global {
@@ -23,17 +16,22 @@ declare global {
 let cached = global.mongooseGlobal;
 
 if (!cached) {
-  cached = global.mongooseGlobal = { conn: null, promise: null };
+  cached = global.mongooseGlobal = { conn: null, promise: null, isFallback: false };
 }
 
-export async function dbConnect() {
+export async function dbConnect(): Promise<typeof mongoose | null> {
   if (cached?.conn) {
     return cached.conn;
+  }
+
+  if (cached?.isFallback) {
+    return null;
   }
 
   if (!cached?.promise) {
     const opts = {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 2000, // Short timeout to fail fast if local mongod is not running
     };
 
     cached!.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
@@ -43,12 +41,15 @@ export async function dbConnect() {
 
   try {
     cached!.conn = await cached!.promise;
-  } catch (e) {
+    return cached!.conn;
+  } catch (e: any) {
     cached!.promise = null;
-    throw e;
+    cached!.isFallback = true;
+    console.warn(
+      `⚠️ MongoDB Connection Warning (${e?.message || 'Offline'}). Falling back to in-memory store. To connect to MongoDB Atlas or local daemon, update MONGODB_URI in .env.local`
+    );
+    return null;
   }
-
-  return cached!.conn;
 }
 
 export default dbConnect;

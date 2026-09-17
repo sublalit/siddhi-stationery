@@ -1,6 +1,7 @@
 import dbConnect from '@/lib/db';
 import Product from '@/models/Product';
 import InventoryLog from '@/models/InventoryLog';
+import { mockProducts, mockInventoryLogs } from '@/lib/mockStore';
 
 export interface IDashboardStats {
   totalProducts: number;
@@ -26,10 +27,24 @@ export interface IDashboardStats {
 }
 
 export async function getDashboardStats(): Promise<IDashboardStats> {
-  await dbConnect();
+  const conn = await dbConnect();
 
-  // Fetch all products
-  const products = await Product.find({}).lean();
+  let products: any[] = [];
+  let logs: any[] = [];
+
+  if (conn) {
+    try {
+      products = await Product.find({}).lean();
+      logs = await InventoryLog.find({}).sort({ timestamp: -1 }).limit(10).lean();
+    } catch (e) {
+      console.warn('DB query error, using mock data');
+      products = mockProducts;
+      logs = mockInventoryLogs;
+    }
+  } else {
+    products = mockProducts;
+    logs = mockInventoryLogs;
+  }
 
   let totalProducts = products.length;
   let totalValue = 0;
@@ -42,10 +57,12 @@ export async function getDashboardStats(): Promise<IDashboardStats> {
     const val = (p.currentStock || 0) * (p.sellingPrice || 0);
     totalValue += val;
 
+    const id = p._id ? p._id.toString() : p.sku;
+
     if (p.currentStock === 0) {
       outOfStockCount++;
       lowStockItems.push({
-        _id: p._id.toString(),
+        _id: id,
         name: p.name,
         sku: p.sku,
         currentStock: p.currentStock,
@@ -54,7 +71,7 @@ export async function getDashboardStats(): Promise<IDashboardStats> {
     } else if (p.currentStock <= (p.minStock || 5)) {
       lowStockCount++;
       lowStockItems.push({
-        _id: p._id.toString(),
+        _id: id,
         name: p.name,
         sku: p.sku,
         currentStock: p.currentStock,
@@ -63,22 +80,14 @@ export async function getDashboardStats(): Promise<IDashboardStats> {
     }
   }
 
-  // Fetch recent inventory logs
-  const logs = await InventoryLog.find({}).sort({ timestamp: -1 }).limit(10).lean();
-
   const recentActivity = logs.map((l) => ({
-    _id: l._id.toString(),
+    _id: l._id ? l._id.toString() : Math.random().toString(),
     productName: l.productName || 'Item',
     sku: l.sku || '',
     type: l.type,
     quantity: l.quantity,
     reason: l.reason || '',
-    timestamp: new Date(l.timestamp).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
+    timestamp: typeof l.timestamp === 'string' ? l.timestamp : new Date(l.timestamp).toLocaleString(),
   }));
 
   return {
