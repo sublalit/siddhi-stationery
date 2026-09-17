@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { TrendingUp, ArrowDownRight, ArrowUpRight, Activity } from 'lucide-react';
 
 interface ActivityItem {
@@ -32,10 +33,12 @@ export default function ActivityLog({ activities }: ActivityLogProps) {
         <div className="space-y-3 overflow-y-auto max-h-[320px] pr-1">
           {activities.map((act) => {
             const isStockOut = act.type === 'Stock Out';
+            const targetHref = isStockOut ? '/invoices' : `/products?search=${encodeURIComponent(act.sku || '')}`;
             return (
-              <div
+              <Link
                 key={act._id}
-                className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between"
+                href={targetHref}
+                className="p-3.5 rounded-xl bg-slate-50/80 hover:bg-cyan-50/50 border border-slate-100 hover:border-[#00aeef]/50 flex items-center justify-between transition-all group cursor-pointer block"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -44,7 +47,9 @@ export default function ActivityLog({ activities }: ActivityLogProps) {
                     }`}
                   />
                   <div>
-                    <h4 className="text-xs font-bold text-slate-800">{act.type}</h4>
+                    <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#00aeef] transition-colors">
+                      {act.type}
+                    </h4>
                     <p className="text-[11px] text-slate-500 mt-0.5">
                       {act.productName} ({act.reason})
                     </p>
@@ -66,7 +71,7 @@ export default function ActivityLog({ activities }: ActivityLogProps) {
                   </span>
                   <p className="text-[10px] text-slate-400 mt-0.5">{act.timestamp}</p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
