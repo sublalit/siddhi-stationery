@@ -3,6 +3,7 @@ import { Package, TrendingUp, AlertTriangle, PackageX, Home } from 'lucide-react
 import MetricCard from '@/components/dashboard/MetricCard';
 import LowStockWidget from '@/components/dashboard/LowStockWidget';
 import ActivityLog from '@/components/dashboard/ActivityLog';
+import CategoriesOverview from '@/components/dashboard/CategoriesOverview';
 import { getDashboardStats } from '@/lib/actions/dashboard';
 
 export const revalidate = 0; // Fresh server metrics on load
@@ -28,11 +29,11 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
         <p className="text-xs text-slate-500 mt-1 font-medium">
-          Overview of your inventory status, low stock alerts, and recent transactions
+          Overview of your inventory status, department categories, low stock alerts, and recent transactions
         </p>
       </div>
 
-      {/* Top 4 KPI Metric Cards */}
+      {/* Top 4 KPI Clickable Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <MetricCard
           title="Total Products"
@@ -40,6 +41,7 @@ export default async function DashboardPage() {
           badge="+5 this week"
           badgeColor="cyan"
           icon={Package}
+          href="/products"
         />
         <MetricCard
           title="Total Value"
@@ -47,6 +49,7 @@ export default async function DashboardPage() {
           subtitle="Inventory worth"
           badgeColor="cyan"
           icon={TrendingUp}
+          href="/products"
         />
         <MetricCard
           title="Low Stock"
@@ -54,6 +57,7 @@ export default async function DashboardPage() {
           badge={stats.lowStockCount > 0 ? 'Needs attention' : 'Healthy'}
           badgeColor={stats.lowStockCount > 0 ? 'amber' : 'emerald'}
           icon={AlertTriangle}
+          href="/products?stockStatus=low-stock"
         />
         <MetricCard
           title="Out of Stock"
@@ -61,10 +65,14 @@ export default async function DashboardPage() {
           badge={stats.outOfStockCount > 0 ? 'Immediate action' : 'All good'}
           badgeColor={stats.outOfStockCount > 0 ? 'red' : 'emerald'}
           icon={PackageX}
+          href="/products?stockStatus=out-of-stock"
         />
       </div>
 
-      {/* Middle Grid: Low Stock Alert Widget & Recent Activity Log */}
+      {/* Categories Overview Section */}
+      <CategoriesOverview categories={stats.categoriesOverview} />
+
+      {/* Grid: Low Stock Alert Widget & Recent Activity Log */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <LowStockWidget items={stats.lowStockItems} />
         <ActivityLog activities={stats.recentActivity} />
