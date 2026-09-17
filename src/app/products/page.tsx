@@ -117,7 +117,7 @@ function ProductsContent() {
     costPrice: number,
     supplier?: string
   ) => {
-    await recordPurchase(productId, quantity, costPrice);
+    await recordPurchase(productId, quantity, costPrice, supplier);
     await fetchProductData();
   };
 

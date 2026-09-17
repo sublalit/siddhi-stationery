@@ -82,7 +82,7 @@ export default function PurchaseHistoryModal({
               const priceVal = (Number(item.unitPrice) || Number(product.costPrice) || 0).toFixed(2);
               const qty = Number(item.quantity) || 100;
               const remaining = Number(item.remaining) || qty;
-              const supplier = item.supplier || product.vendor?.name || 'General Supplier';
+              const supplier = (item.supplier && item.supplier.trim() !== '') ? item.supplier.trim() : (product.vendor?.name || 'General Supplier');
               const batchCode = item.batch || `B${1000 + idx}`;
 
               return (
