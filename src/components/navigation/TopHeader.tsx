@@ -18,6 +18,7 @@ import {
   FileText,
   ScanLine,
   Printer,
+  LogOut,
 } from 'lucide-react';
 
 const mobileNavItems = [
@@ -142,6 +143,15 @@ export default function TopHeader() {
                     {role === r && <CheckCircle2 className="w-3.5 h-3.5 text-[#00aeef]" />}
                   </button>
                 ))}
+                <div className="border-t border-slate-100 my-1"></div>
+                <Link
+                  href="/auth"
+                  onClick={() => setDropdownOpen(false)}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center justify-between transition-colors"
+                >
+                  <span>Sign Out / Auth</span>
+                  <LogOut className="w-3.5 h-3.5 text-red-500" />
+                </Link>
               </div>
             )}
           </div>

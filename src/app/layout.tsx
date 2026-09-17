@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import TopHeader from '@/components/navigation/TopHeader';
-import Sidebar from '@/components/navigation/Sidebar';
+import AppShell from '@/components/layout/AppShell';
 
 export const metadata: Metadata = {
   title: 'Siddhi Stationery — Inventory & Billing Platform',
@@ -16,13 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className="h-full bg-slate-50 text-slate-900 flex flex-col antialiased">
-        <TopHeader />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar />
-          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-slate-50 pb-20 md:pb-8">
-            {children}
-          </main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
