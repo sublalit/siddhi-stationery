@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Package,
   Plus,
@@ -24,22 +25,33 @@ import {
   recordPurchase,
 } from '@/lib/actions/products';
 
-export default function ProductsPage() {
+function ProductsContent() {
+  const searchParams = useSearchParams();
+  const initialStockParam = searchParams.get('stockStatus') || 'all';
+  const initialSearchParam = searchParams.get('search') || '';
+  const initialCatParam = searchParams.get('categoryId') || 'all';
+
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters & View State
+  // Filters & View State initialized from URL query parameters
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStock, setSelectedStock] = useState('all');
+  const [search, setSearch] = useState(initialSearchParam);
+  const [selectedCategory, setSelectedCategory] = useState(initialCatParam);
+  const [selectedStock, setSelectedStock] = useState(initialStockParam);
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any | null>(null);
   const [purchasingProduct, setPurchasingProduct] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (initialStockParam !== 'all') setSelectedStock(initialStockParam);
+    if (initialSearchParam !== '') setSearch(initialSearchParam);
+    if (initialCatParam !== 'all') setSelectedCategory(initialCatParam);
+  }, [initialStockParam, initialSearchParam, initialCatParam]);
 
   const fetchProductData = async () => {
     try {
@@ -72,7 +84,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchProductData();
-    }, 250);
+    }, 200);
     return () => clearTimeout(timer);
   }, [search, selectedCategory, selectedStock]);
 
@@ -113,11 +125,15 @@ export default function ProductsPage() {
         <span className="text-slate-800 font-semibold">Products</span>
       </div>
 
-      {/* Header & Main Actions matching Lovable prototype screenshot */}
+      {/* Header & Main Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Products</h1>
-          <p className="text-xs text-slate-500 mt-0.5 font-medium">Manage your inventory items</p>
+          <p className="text-xs text-slate-500 mt-0.5 font-medium">
+            {selectedStock === 'low-stock'
+              ? 'Showing Low Stock & Restock Alert Items'
+              : 'Manage your inventory items'}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -175,11 +191,11 @@ export default function ProductsPage() {
           <select
             value={selectedStock}
             onChange={(e) => setSelectedStock(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 font-medium focus:outline-none focus:border-[#00aeef]"
+            className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 font-medium focus:outline-none focus:border-[#00aeef] font-bold text-[#00aeef]"
           >
             <option value="all">All Stock</option>
             <option value="in-stock">In Stock (&gt; 5)</option>
-            <option value="low-stock">Low Stock (1 - 5)</option>
+            <option value="low-stock">Low Stock (≤ 5)</option>
             <option value="out-of-stock">Out of Stock (0)</option>
           </select>
 
@@ -220,18 +236,19 @@ export default function ProductsPage() {
       ) : products.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 shadow-xs">
           <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-800">No products found</h3>
+          <h3 className="text-base font-bold text-slate-800">No products match this filter</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            Try adjusting your search criteria or add new stationery products.
+            Try selecting &quot;All Stock&quot; or clearing your search filters.
           </p>
           <button
             onClick={() => {
-              setEditingProduct(null);
-              setIsAddModalOpen(true);
+              setSearch('');
+              setSelectedStock('all');
+              setSelectedCategory('all');
             }}
             className="mt-4 px-4 py-2 bg-[#00aeef] text-white text-xs font-bold rounded-xl shadow-xs"
           >
-            Add Product
+            Reset Filters
           </button>
         </div>
       ) : viewMode === 'grid' ? (
@@ -278,5 +295,18 @@ export default function ProductsPage() {
         onSave={handleRecordPurchaseSave}
       />
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-xs">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#00aeef] mb-2" />
+        Loading...
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 }

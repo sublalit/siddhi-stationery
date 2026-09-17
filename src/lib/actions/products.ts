@@ -27,8 +27,7 @@ export async function getProducts(search?: string, categoryId?: string, stockSta
       result = result.filter((p) => p.category?._id === categoryId);
     }
     if (stockStatus && stockStatus !== 'all') {
-      if (stockStatus === 'in-stock') result = result.filter((p) => p.currentStock > 5);
-      if (stockStatus === 'low-stock') result = result.filter((p) => p.currentStock > 0 && p.currentStock <= 5);
+      if (stockStatus === 'low-stock') result = result.filter((p) => p.currentStock <= (p.minStock || 5));
       if (stockStatus === 'out-of-stock') result = result.filter((p) => p.currentStock === 0);
     }
     return JSON.parse(JSON.stringify(result));
@@ -44,7 +43,7 @@ export async function getProducts(search?: string, categoryId?: string, stockSta
   }
   if (stockStatus && stockStatus !== 'all') {
     if (stockStatus === 'in-stock') query.currentStock = { $gt: 5 };
-    else if (stockStatus === 'low-stock') query.currentStock = { $gt: 0, $lte: 5 };
+    else if (stockStatus === 'low-stock') query.currentStock = { $lte: 5 };
     else if (stockStatus === 'out-of-stock') query.currentStock = 0;
   }
 
