@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FolderTree, Plus, Home, ChevronRight, Package, X, Edit3, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { FolderTree, Plus, Home, ChevronRight, Package, X, Edit3, Trash2, ArrowRight } from 'lucide-react';
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -110,7 +111,7 @@ export default function CategoriesPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Categories</h1>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Organize stationery items by department & type
+            Organize stationery items by department & type. Click any category to view products.
           </p>
         </div>
 
@@ -127,24 +128,38 @@ export default function CategoriesPage() {
         {categories.map((c) => (
           <div
             key={c._id}
-            className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group"
           >
             <div>
               <div className="flex items-center justify-between">
                 <div className="p-2.5 bg-cyan-50 text-[#00aeef] rounded-xl">
                   <FolderTree className="w-5 h-5" />
                 </div>
-                <span className="text-xs font-bold px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-full flex items-center gap-1">
-                  <Package className="w-3 h-3 text-[#00aeef]" />
-                  {c.productCount || 0} Products
-                </span>
+                <Link
+                  href={`/products?categoryId=${c._id}`}
+                  className="text-xs font-bold px-2.5 py-1 bg-cyan-50 hover:bg-[#00aeef] text-[#00aeef] hover:text-white rounded-full flex items-center gap-1 transition-colors"
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  <span>{c.productCount || 0} Products</span>
+                  <ArrowRight className="w-3 h-3 ml-0.5" />
+                </Link>
               </div>
-              <h3 className="text-base font-bold text-slate-900 mt-3">{c.name}</h3>
+              <Link href={`/products?categoryId=${c._id}`}>
+                <h3 className="text-base font-bold text-slate-900 mt-3 group-hover:text-[#00aeef] transition-colors flex items-center gap-1 cursor-pointer">
+                  {c.name}
+                </h3>
+              </Link>
               <p className="text-xs text-slate-500 mt-1 line-clamp-2">{c.description || 'No description provided.'}</p>
             </div>
 
             <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-mono">slug: {c.slug}</span>
+              <Link
+                href={`/products?categoryId=${c._id}`}
+                className="text-xs font-bold text-[#00aeef] hover:underline flex items-center gap-1"
+              >
+                <span>View Products</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => handleOpenEdit(c)}

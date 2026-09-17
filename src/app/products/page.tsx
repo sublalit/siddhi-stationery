@@ -33,6 +33,7 @@ function ProductsContent() {
   const initialStockParam = searchParams.get('stockStatus') || 'all';
   const initialSearchParam = searchParams.get('search') || '';
   const initialCatParam = searchParams.get('categoryId') || 'all';
+  const initialVendorParam = searchParams.get('vendorId') || 'all';
 
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -43,6 +44,7 @@ function ProductsContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [search, setSearch] = useState(initialSearchParam);
   const [selectedCategory, setSelectedCategory] = useState(initialCatParam);
+  const [selectedVendor, setSelectedVendor] = useState(initialVendorParam);
   const [selectedStock, setSelectedStock] = useState(initialStockParam);
 
   // Modals
@@ -58,12 +60,13 @@ function ProductsContent() {
     if (initialStockParam !== 'all') setSelectedStock(initialStockParam);
     if (initialSearchParam !== '') setSearch(initialSearchParam);
     if (initialCatParam !== 'all') setSelectedCategory(initialCatParam);
-  }, [initialStockParam, initialSearchParam, initialCatParam]);
+    if (initialVendorParam !== 'all') setSelectedVendor(initialVendorParam);
+  }, [initialStockParam, initialSearchParam, initialCatParam, initialVendorParam]);
 
   const fetchProductData = async () => {
     try {
       setLoading(true);
-      const data = await getProducts(search, selectedCategory, selectedStock);
+      const data = await getProducts(search, selectedCategory, selectedStock, selectedVendor);
       setProducts(data);
     } catch (err) {
       console.error('Failed to fetch products:', err);
@@ -93,7 +96,7 @@ function ProductsContent() {
       fetchProductData();
     }, 200);
     return () => clearTimeout(timer);
-  }, [search, selectedCategory, selectedStock]);
+  }, [search, selectedCategory, selectedVendor, selectedStock]);
 
   const handleSaveProduct = async (formData: any) => {
     if (editingProduct) {
@@ -182,7 +185,7 @@ function ProductsContent() {
           />
         </div>
 
-        {/* Category & Stock Dropdowns */}
+        {/* Category, Vendor & Stock Dropdowns */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <select
             value={selectedCategory}
@@ -198,9 +201,22 @@ function ProductsContent() {
           </select>
 
           <select
+            value={selectedVendor}
+            onChange={(e) => setSelectedVendor(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 font-medium focus:outline-none focus:border-[#00aeef]"
+          >
+            <option value="all">All Vendors</option>
+            {vendors.map((v) => (
+              <option key={v._id} value={v._id}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+
+          <select
             value={selectedStock}
             onChange={(e) => setSelectedStock(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 font-medium focus:outline-none focus:border-[#00aeef] font-bold text-[#00aeef]"
+            className="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white text-slate-700 syntax-bold focus:outline-none focus:border-[#00aeef] font-bold text-[#00aeef]"
           >
             <option value="all">All Stock</option>
             <option value="in-stock">In Stock (&gt; 5)</option>
@@ -254,6 +270,7 @@ function ProductsContent() {
               setSearch('');
               setSelectedStock('all');
               setSelectedCategory('all');
+              setSelectedVendor('all');
             }}
             className="mt-4 px-4 py-2 bg-[#00aeef] text-white text-xs font-bold rounded-xl shadow-xs"
           >

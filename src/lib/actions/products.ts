@@ -40,7 +40,7 @@ let memoryInventoryLogs: any[] = [
   ...mockInventoryLogs,
 ];
 
-export async function getProducts(search?: string, categoryId?: string, stockStatus?: string) {
+export async function getProducts(search?: string, categoryId?: string, stockStatus?: string, vendorId?: string) {
   const conn = await dbConnect();
 
   if (!conn) {
@@ -55,7 +55,10 @@ export async function getProducts(search?: string, categoryId?: string, stockSta
       );
     }
     if (categoryId && categoryId !== 'all') {
-      result = result.filter((p) => p.category?._id === categoryId);
+      result = result.filter((p: any) => p.category?._id === categoryId || p.category === categoryId);
+    }
+    if (vendorId && vendorId !== 'all') {
+      result = result.filter((p: any) => p.vendor?._id === vendorId || p.vendor === vendorId || p.vendor?.name === vendorId);
     }
     if (stockStatus && stockStatus !== 'all') {
       if (stockStatus === 'in-stock') result = result.filter((p) => p.currentStock > 5);
@@ -73,6 +76,9 @@ export async function getProducts(search?: string, categoryId?: string, stockSta
   if (categoryId && categoryId !== 'all') {
     query.category = categoryId;
   }
+  if (vendorId && vendorId !== 'all') {
+    query.vendor = vendorId;
+  }
   if (stockStatus && stockStatus !== 'all') {
     if (stockStatus === 'in-stock') query.currentStock = { $gt: 5 };
     else if (stockStatus === 'low-stock') query.currentStock = { $lte: 5 };
@@ -88,7 +94,14 @@ export async function getProducts(search?: string, categoryId?: string, stockSta
 
     return JSON.parse(JSON.stringify(products));
   } catch (e) {
-    return JSON.parse(JSON.stringify(memoryProducts));
+    let result = [...memoryProducts];
+    if (categoryId && categoryId !== 'all') {
+      result = result.filter((p: any) => p.category?._id === categoryId || p.category === categoryId);
+    }
+    if (vendorId && vendorId !== 'all') {
+      result = result.filter((p: any) => p.vendor?._id === vendorId || p.vendor === vendorId || p.vendor?.name === vendorId);
+    }
+    return JSON.parse(JSON.stringify(result));
   }
 }
 

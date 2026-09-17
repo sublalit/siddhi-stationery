@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, Home, ChevronRight, Mail, Phone, MapPin, User, X, Edit3, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Plus, Home, ChevronRight, Mail, Phone, MapPin, User, X, Edit3, Trash2, ArrowRight, Package } from 'lucide-react';
 
 export default function VendorsPage() {
   const [vendors, setVendors] = useState<any[]>([]);
@@ -119,7 +120,7 @@ export default function VendorsPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Vendors</h1>
           <p className="text-xs text-slate-500 mt-0.5 font-medium">
-            Manage wholesale suppliers and paper distributors
+            Manage wholesale suppliers and paper distributors. Click any vendor to view supplied products.
           </p>
         </div>
 
@@ -136,7 +137,7 @@ export default function VendorsPage() {
         {vendors.map((v) => (
           <div
             key={v._id}
-            className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow group"
           >
             <div>
               <div className="flex items-center justify-between">
@@ -170,7 +171,11 @@ export default function VendorsPage() {
                 </div>
               </div>
 
-              <h3 className="text-base font-bold text-slate-900 mt-3">{v.name}</h3>
+              <Link href={`/products?vendorId=${v._id}`}>
+                <h3 className="text-base font-bold text-slate-900 mt-3 group-hover:text-[#00aeef] transition-colors flex items-center gap-1 cursor-pointer">
+                  {v.name}
+                </h3>
+              </Link>
 
               <div className="mt-3 space-y-1.5 text-xs text-slate-600">
                 {v.contactPerson && (
@@ -198,6 +203,16 @@ export default function VendorsPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+              <Link
+                href={`/products?vendorId=${v._id}`}
+                className="text-xs font-bold text-[#00aeef] hover:underline flex items-center gap-1"
+              >
+                <span>View Products</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         ))}
