@@ -35,19 +35,35 @@ export default function PriceHistoryModal({
 
   const currentSellingPrice = (Number(product.sellingPrice) || 0).toFixed(2);
 
+  // Compute Average Purchase Price
+  const purchaseEntries = priceHistory.filter((item) => item.type === 'Purchase Price');
+  const avgPurchasePrice =
+    purchaseEntries.length > 0
+      ? (
+          purchaseEntries.reduce((sum, item) => sum + (Number(item.price) || 0), 0) /
+          purchaseEntries.length
+        ).toFixed(2)
+      : (Number(product.costPrice) || 0).toFixed(2);
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150 relative">
         
-        {/* Header Title & Circular Close Button matching Image 2 */}
+        {/* Header Title & Circular Close Button matching screenshot */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-base font-bold text-slate-900">
               Price History - {product.name}
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Current Selling Price: ₹{currentSellingPrice}
-            </p>
+            <div className="text-xs text-slate-500 font-medium mt-1 flex flex-wrap items-center gap-2">
+              <span>
+                Current Selling Price: <strong className="text-slate-800">₹{currentSellingPrice}</strong>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span>
+                Average Purchase Price: <strong className="text-[#00aeef]">₹{avgPurchasePrice}</strong>
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -57,7 +73,7 @@ export default function PriceHistoryModal({
           </button>
         </div>
 
-        {/* Price History Cards List matching Image 2 */}
+        {/* Price History Cards List matching screenshot */}
         {loading ? (
           <div className="py-12 flex flex-col items-center justify-center text-slate-400 text-xs">
             <RefreshCw className="w-6 h-6 animate-spin text-[#00aeef] mb-2" />
