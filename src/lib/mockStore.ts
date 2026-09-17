@@ -17,6 +17,8 @@ export interface IMockProduct {
   imageUrl: string;
   description: string;
   isCustomPrinting?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const mockCategories = [

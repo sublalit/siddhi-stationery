@@ -6,6 +6,10 @@ export interface IInventoryLog extends Document {
   sku: string;
   type: 'Stock In' | 'Stock Out' | 'Adjustment';
   quantity: number;
+  remaining?: number;
+  unitPrice?: number;
+  supplier?: string;
+  batch?: string;
   reason: string;
   referenceId?: string;
   performedBy: string;
@@ -19,6 +23,10 @@ const InventoryLogSchema = new Schema<IInventoryLog>(
     sku: { type: String, required: true },
     type: { type: String, enum: ['Stock In', 'Stock Out', 'Adjustment'], required: true },
     quantity: { type: Number, required: true },
+    remaining: { type: Number },
+    unitPrice: { type: Number },
+    supplier: { type: String, default: 'General Supplier' },
+    batch: { type: String },
     reason: { type: String, required: true },
     referenceId: { type: String },
     performedBy: { type: String, default: 'Admin User' },
