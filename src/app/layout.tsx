@@ -19,7 +19,7 @@ export default function RootLayout({
         <TopHeader />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />
-          <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-slate-50">
+          <main className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8 bg-slate-50 pb-20 md:pb-8">
             {children}
           </main>
         </div>

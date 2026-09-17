@@ -112,7 +112,7 @@ export default function CustomPrintingPage() {
           </div>
 
           <form onSubmit={handleRequestSubmit} className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Customer Name *</label>
                 <input
@@ -137,7 +137,7 @@ export default function CustomPrintingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Service Type</label>
                 <select
@@ -165,7 +165,7 @@ export default function CustomPrintingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Paper GSM</label>
                 <select
