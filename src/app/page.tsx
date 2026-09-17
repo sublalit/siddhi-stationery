@@ -1,69 +1,74 @@
-import Image from "next/image";
+import React from 'react';
+import { Package, TrendingUp, AlertTriangle, PackageX, Home } from 'lucide-react';
+import MetricCard from '@/components/dashboard/MetricCard';
+import LowStockWidget from '@/components/dashboard/LowStockWidget';
+import ActivityLog from '@/components/dashboard/ActivityLog';
+import { getDashboardStats } from '@/lib/actions/dashboard';
 
-export default function Home() {
+export const revalidate = 0; // Fresh server metrics on load
+
+export default async function DashboardPage() {
+  const stats = await getDashboardStats();
+
+  const formattedTotalValue = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(stats.totalValue);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-6">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+        <Home className="w-3.5 h-3.5 text-slate-400" />
+        <span>Dashboard</span>
+      </div>
+
+      {/* Header Title */}
+      <div>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
+        <p className="text-xs text-slate-500 mt-1 font-medium">
+          Overview of your inventory status, low stock alerts, and recent transactions
+        </p>
+      </div>
+
+      {/* Top 4 KPI Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <MetricCard
+          title="Total Products"
+          value={stats.totalProducts}
+          badge="+5 this week"
+          badgeColor="cyan"
+          icon={Package}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <MetricCard
+          title="Total Value"
+          value={formattedTotalValue}
+          subtitle="Inventory worth"
+          badgeColor="cyan"
+          icon={TrendingUp}
+        />
+        <MetricCard
+          title="Low Stock"
+          value={stats.lowStockCount}
+          badge={stats.lowStockCount > 0 ? 'Needs attention' : 'Healthy'}
+          badgeColor={stats.lowStockCount > 0 ? 'amber' : 'emerald'}
+          icon={AlertTriangle}
+        />
+        <MetricCard
+          title="Out of Stock"
+          value={stats.outOfStockCount}
+          badge={stats.outOfStockCount > 0 ? 'Immediate action' : 'All good'}
+          badgeColor={stats.outOfStockCount > 0 ? 'red' : 'emerald'}
+          icon={PackageX}
+        />
+      </div>
+
+      {/* Middle Grid: Low Stock Alert Widget & Recent Activity Log */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <LowStockWidget items={stats.lowStockItems} />
+        <ActivityLog activities={stats.recentActivity} />
+      </div>
     </div>
   );
 }
