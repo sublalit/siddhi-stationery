@@ -1,135 +1,145 @@
 'use server';
 
-import dbConnect from '@/lib/db';
-import Invoice from '@/models/Invoice';
-import Product from '@/models/Product';
-import InventoryLog from '@/models/InventoryLog';
+import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { mockInvoices } from '@/lib/mockStore';
 
-let memoryInvoices = [...mockInvoices];
+function formatInvoice(inv: any) {
+  if (!inv) return null;
+  return {
+    ...inv,
+    _id: inv.id,
+    customer: {
+      name: inv.customerName,
+      phone: inv.customerPhone || '',
+      email: inv.customerEmail || '',
+      address: inv.customerAddress || '',
+      gstin: inv.customerGstin || '',
+    },
+    items: (inv.items || []).map((item: any) => ({
+      ...item,
+      _id: item.id,
+      product: item.productId,
+    })),
+  };
+}
 
 export async function getInvoices(status?: string) {
-  const conn = await dbConnect();
-
-  if (!conn) {
-    let result = [...memoryInvoices];
-    if (status && status !== 'All') {
-      result = result.filter((i) => i.paymentStatus === status);
-    }
-    return JSON.parse(JSON.stringify(result));
-  }
-
-  const query: any = {};
-  if (status && status !== 'All') {
-    query.paymentStatus = status;
-  }
-
   try {
-    const invoices = await Invoice.find(query).sort({ createdAt: -1 }).lean();
-    return JSON.parse(JSON.stringify(invoices));
-  } catch (e) {
-    return JSON.parse(JSON.stringify(memoryInvoices));
+    const where: any = {};
+    if (status && status !== 'All') {
+      where.paymentStatus = status;
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where,
+      include: {
+        items: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return invoices.map(formatInvoice);
+  } catch (error: any) {
+    console.error('getInvoices error:', error);
+    return [];
   }
 }
 
 export async function createInvoice(data: any) {
-  const conn = await dbConnect();
+  try {
+    const count = await prisma.invoice.count();
+    const invoiceNumber = `INV-2026-${String(count + 1).padStart(3, '0')}`;
 
-  const count = memoryInvoices.length + 1;
-  const invoiceNumber = `INV-2026-${String(count).padStart(3, '0')}`;
-
-  if (!conn) {
-    const newInv: any = {
-      _id: `inv-${Date.now()}`,
-      invoiceNumber,
-      customer: {
-        name: data.customer.name,
-        phone: data.customer.phone || '',
-        email: data.customer.email || '',
-        address: data.customer.address || '',
-        gstin: data.customer.gstin || '',
+    const newInvoice = await prisma.invoice.create({
+      data: {
+        invoiceNumber,
+        customerName: data.customer.name,
+        customerPhone: data.customer.phone || '',
+        customerEmail: data.customer.email || '',
+        customerAddress: data.customer.address || '',
+        customerGstin: data.customer.gstin || '',
+        subtotal: Number(data.subtotal) || 0,
+        gstAmount: Number(data.gstAmount) || 0,
+        discountTotal: Number(data.discountTotal) || 0,
+        grandTotal: Number(data.grandTotal) || 0,
+        paymentStatus: data.paymentStatus || 'Paid',
+        paymentMethod: data.paymentMethod || 'Cash',
+        notes: data.notes || '',
+        items: {
+          create: (data.items || []).map((item: any) => ({
+            productId: item.product || null,
+            productName: item.productName || 'Item',
+            sku: item.sku || '',
+            quantity: Number(item.quantity) || 1,
+            unitPrice: Number(item.unitPrice) || 0,
+            discountPercent: Number(item.discountPercent) || 0,
+            lineTotal: Number(item.lineTotal) || 0,
+          })),
+        },
       },
-      items: data.items,
-      subtotal: data.subtotal,
-      gstAmount: data.gstAmount,
-      discountTotal: data.discountTotal,
-      grandTotal: data.grandTotal,
-      paymentStatus: data.paymentStatus || 'Paid',
-      paymentMethod: data.paymentMethod || 'Cash',
-      createdAt: new Date().toISOString(),
-    };
-    memoryInvoices.unshift(newInv);
+      include: {
+        items: true,
+      },
+    });
+
+    for (const item of data.items || []) {
+      if (item.product) {
+        const product = await prisma.product
+          .findUnique({ where: { id: item.product } })
+          .catch(() => null);
+
+        if (product) {
+          const newStock = Math.max(0, product.currentStock - Number(item.quantity));
+          await prisma.product
+            .update({
+              where: { id: product.id },
+              data: { currentStock: newStock },
+            })
+            .catch(() => {});
+
+          await prisma.inventoryLog
+            .create({
+              data: {
+                productId: product.id,
+                productName: product.name,
+                sku: product.sku,
+                type: 'Stock Out',
+                quantity: Number(item.quantity),
+                remaining: newStock,
+                reason: `Sale #${invoiceNumber}`,
+                performedBy: 'Admin User',
+              },
+            })
+            .catch(() => {});
+        }
+      }
+    }
+
     revalidatePath('/invoices');
     revalidatePath('/products');
     revalidatePath('/');
-    return JSON.parse(JSON.stringify(newInv));
+
+    return formatInvoice(newInvoice);
+  } catch (error: any) {
+    console.error('createInvoice error:', error);
+    throw error;
   }
-
-  const newInvoice = await Invoice.create({
-    invoiceNumber,
-    customer: {
-      name: data.customer.name,
-      phone: data.customer.phone || '',
-      email: data.customer.email || '',
-      address: data.customer.address || '',
-      gstin: data.customer.gstin || '',
-    },
-    items: data.items,
-    subtotal: data.subtotal,
-    gstAmount: data.gstAmount,
-    discountTotal: data.discountTotal,
-    grandTotal: data.grandTotal,
-    paymentStatus: data.paymentStatus || 'Paid',
-    paymentMethod: data.paymentMethod || 'Cash',
-    notes: data.notes || '',
-  });
-
-  for (const item of data.items) {
-    if (item.product) {
-      const product = await Product.findById(item.product).catch(() => null);
-      if (product) {
-        product.currentStock = Math.max(0, product.currentStock - item.quantity);
-        await product.save().catch(() => {});
-
-        await InventoryLog.create({
-          product: product._id,
-          productName: product.name,
-          sku: product.sku,
-          type: 'Stock Out',
-          quantity: item.quantity,
-          reason: `Sale #${invoiceNumber}`,
-          performedBy: 'Admin User',
-        }).catch(() => {});
-      }
-    }
-  }
-
-  revalidatePath('/invoices');
-  revalidatePath('/products');
-  revalidatePath('/');
-
-  return JSON.parse(JSON.stringify(newInvoice));
 }
 
 export async function updateInvoiceStatus(id: string, status: string) {
-  const conn = await dbConnect();
+  try {
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data: { paymentStatus: status },
+      include: { items: true },
+    });
 
-  if (!conn) {
-    const inv = memoryInvoices.find((i) => i._id === id);
-    if (inv) inv.paymentStatus = status as any;
     revalidatePath('/invoices');
     revalidatePath('/');
-    return JSON.parse(JSON.stringify(inv || {}));
+
+    return formatInvoice(updated);
+  } catch (error: any) {
+    console.error('updateInvoiceStatus error:', error);
+    throw error;
   }
-
-  const updated = await Invoice.findByIdAndUpdate(
-    id,
-    { paymentStatus: status },
-    { new: true }
-  );
-
-  revalidatePath('/invoices');
-  revalidatePath('/');
-  return JSON.parse(JSON.stringify(updated));
 }

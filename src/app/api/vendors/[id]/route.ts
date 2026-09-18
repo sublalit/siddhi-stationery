@@ -1,32 +1,29 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
-import Vendor from '@/models/Vendor';
+import prisma from '@/lib/prisma';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await req.json();
-    const conn = await dbConnect();
 
-    if (!conn) {
-      return NextResponse.json({ success: true, message: 'Vendor updated in memory' });
-    }
-
-    const updated = await Vendor.findByIdAndUpdate(
-      id,
-      {
+    const updated = await prisma.vendor.update({
+      where: { id },
+      data: {
         name: body.name,
         contactPerson: body.contactPerson,
         email: body.email,
         phone: body.phone,
         address: body.address,
-        status: body.status || 'Active',
+        status: body.status,
       },
-      { new: true }
-    );
+    });
 
-    return NextResponse.json({ success: true, vendor: updated });
+    return NextResponse.json({
+      success: true,
+      vendor: { ...updated, _id: updated.id },
+    });
   } catch (error: any) {
+    console.error('Vendor PUT error:', error);
     return NextResponse.json({ success: false, error: error?.message }, { status: 500 });
   }
 }
@@ -34,15 +31,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const conn = await dbConnect();
-
-    if (!conn) {
-      return NextResponse.json({ success: true, message: 'Vendor deleted from memory' });
-    }
-
-    await Vendor.findByIdAndDelete(id);
+    await prisma.vendor.delete({
+      where: { id },
+    });
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    console.error('Vendor DELETE error:', error);
     return NextResponse.json({ success: false, error: error?.message }, { status: 500 });
   }
 }

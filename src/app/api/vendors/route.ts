@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db';
-import Vendor from '@/models/Vendor';
-import { mockVendors } from '@/lib/mockStore';
-
-let memoryVendors = [...mockVendors];
+import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const conn = await dbConnect();
-    if (!conn) {
-      return NextResponse.json({ success: true, vendors: memoryVendors });
-    }
-    const vendors = await Vendor.find({}).sort({ name: 1 }).lean();
-    return NextResponse.json({ success: true, vendors });
+    const vendors = await prisma.vendor.findMany({
+      orderBy: { name: 'asc' },
+    });
+
+    const mappedVendors = vendors.map((v) => ({
+      ...v,
+      _id: v.id,
+    }));
+
+    return NextResponse.json({ success: true, vendors: mappedVendors });
   } catch (error: any) {
-    return NextResponse.json({ success: true, vendors: memoryVendors });
+    console.error('Vendor GET error:', error);
+    return NextResponse.json({ success: false, error: error?.message || 'Failed' }, { status: 500 });
   }
 }
 
@@ -25,31 +26,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Vendor name is required' }, { status: 400 });
     }
 
-    const conn = await dbConnect();
-
-    if (!conn) {
-      const newV = {
-        _id: `ven-${Date.now()}`,
+    const newVendor = await prisma.vendor.create({
+      data: {
         name: body.name.trim(),
         contactPerson: body.contactPerson || '',
         email: body.email || '',
         phone: body.phone || '',
         address: body.address || '',
         status: body.status || 'Active',
-      };
-      memoryVendors.unshift(newV);
-      return NextResponse.json({ success: true, vendor: newV });
-    }
-
-    const newVendor = await Vendor.create({
-      name: body.name.trim(),
-      contactPerson: body.contactPerson || '',
-      email: body.email || '',
-      phone: body.phone || '',
-      address: body.address || '',
-      status: body.status || 'Active',
+      },
     });
-    return NextResponse.json({ success: true, vendor: newVendor });
+
+    return NextResponse.json({
+      success: true,
+      vendor: { ...newVendor, _id: newVendor.id },
+    });
   } catch (error: any) {
     console.error('Vendor POST error:', error);
     return NextResponse.json({ success: false, error: error?.message || 'Failed' }, { status: 500 });

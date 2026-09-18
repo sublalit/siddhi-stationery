@@ -1,8 +1,4 @@
-import dbConnect from '@/lib/db';
-import Product from '@/models/Product';
-import Category from '@/models/Category';
-import InventoryLog from '@/models/InventoryLog';
-import { mockProducts, mockCategories, mockInventoryLogs } from '@/lib/mockStore';
+import prisma from '@/lib/prisma';
 
 export interface ICategoryOverview {
   _id: string;
@@ -37,119 +33,111 @@ export interface IDashboardStats {
 }
 
 export async function getDashboardStats(): Promise<IDashboardStats> {
-  const conn = await dbConnect();
-
-  let products: any[] = [];
-  let categories: any[] = [];
-  let logs: any[] = [];
-
-  if (conn) {
-    try {
-      products = await Product.find({}).populate('category').lean();
-      categories = await Category.find({}).lean();
-      logs = await InventoryLog.find({}).sort({ timestamp: -1 }).limit(10).lean();
-    } catch (e) {
-      console.warn('DB query error, using mock data');
-      products = mockProducts;
-      categories = mockCategories;
-      logs = mockInventoryLogs;
-    }
-  } else {
-    products = mockProducts;
-    categories = mockCategories;
-    logs = mockInventoryLogs;
-  }
-
-  let totalProducts = products.length;
-  let totalValue = 0;
-  let lowStockCount = 0;
-  let outOfStockCount = 0;
-
-  const lowStockItems: IDashboardStats['lowStockItems'] = [];
-
-  // Group stats by category
-  const categoryStatsMap = new Map<string, { count: number; value: number; name: string; slug: string }>();
-
-  for (const c of categories) {
-    const cId = c._id ? c._id.toString() : c.slug;
-    categoryStatsMap.set(cId, {
-      count: 0,
-      value: 0,
-      name: c.name,
-      slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+  try {
+    const products = await prisma.product.findMany({
+      include: { category: true },
     });
-  }
 
-  for (const p of products) {
-    const val = (p.currentStock || 0) * (p.sellingPrice || 0);
-    totalValue += val;
+    const categories = await prisma.category.findMany();
+    const logs = await prisma.inventoryLog.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: 10,
+    });
 
-    const id = p._id ? p._id.toString() : p.sku;
+    let totalProducts = products.length;
+    let totalValue = 0;
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
 
-    if (p.currentStock === 0) {
-      outOfStockCount++;
-      lowStockItems.push({
-        _id: id,
-        name: p.name,
-        sku: p.sku,
-        currentStock: p.currentStock,
-        minStock: p.minStock || 5,
-      });
-    } else if (p.currentStock <= (p.minStock || 5)) {
-      lowStockCount++;
-      lowStockItems.push({
-        _id: id,
-        name: p.name,
-        sku: p.sku,
-        currentStock: p.currentStock,
-        minStock: p.minStock || 5,
+    const lowStockItems: IDashboardStats['lowStockItems'] = [];
+    const categoryStatsMap = new Map<string, { count: number; value: number; name: string; slug: string }>();
+
+    for (const c of categories) {
+      categoryStatsMap.set(c.id, {
+        count: 0,
+        value: 0,
+        name: c.name,
+        slug: c.slug,
       });
     }
 
-    // Accumulate category stats
-    const catObj = p.category;
-    if (catObj) {
-      const catId = typeof catObj === 'object' && catObj._id ? catObj._id.toString() : catObj.toString();
-      const existing = categoryStatsMap.get(catId);
-      if (existing) {
-        existing.count += 1;
-        existing.value += val;
-      } else {
-        categoryStatsMap.set(catId, {
-          count: 1,
-          value: val,
-          name: typeof catObj === 'object' ? catObj.name : 'Stationery',
-          slug: typeof catObj === 'object' ? catObj.slug : 'stationery',
+    for (const p of products) {
+      const val = (p.currentStock || 0) * (p.sellingPrice || 0);
+      totalValue += val;
+
+      if (p.currentStock === 0) {
+        outOfStockCount++;
+        lowStockItems.push({
+          _id: p.id,
+          name: p.name,
+          sku: p.sku,
+          currentStock: p.currentStock,
+          minStock: p.minStock || 5,
+        });
+      } else if (p.currentStock <= (p.minStock || 5)) {
+        lowStockCount++;
+        lowStockItems.push({
+          _id: p.id,
+          name: p.name,
+          sku: p.sku,
+          currentStock: p.currentStock,
+          minStock: p.minStock || 5,
         });
       }
+
+      if (p.category) {
+        const existing = categoryStatsMap.get(p.categoryId);
+        if (existing) {
+          existing.count += 1;
+          existing.value += val;
+        } else {
+          categoryStatsMap.set(p.categoryId, {
+            count: 1,
+            value: val,
+            name: p.category.name,
+            slug: p.category.slug,
+          });
+        }
+      }
     }
+
+    const categoriesOverview: ICategoryOverview[] = Array.from(categoryStatsMap.entries()).map(([id, stat]) => ({
+      _id: id,
+      name: stat.name,
+      slug: stat.slug,
+      productCount: stat.count,
+      totalValue: stat.value,
+    }));
+
+    const recentActivity = logs.map((l) => ({
+      _id: l.id,
+      productName: l.productName || 'Item',
+      sku: l.sku || '',
+      type: l.type,
+      quantity: l.quantity,
+      reason: l.reason || '',
+      timestamp: typeof l.timestamp === 'string' ? l.timestamp : new Date(l.timestamp).toLocaleString(),
+    }));
+
+    return {
+      totalProducts,
+      totalValue,
+      lowStockCount,
+      outOfStockCount,
+      lowStockItems,
+      recentActivity,
+      categoriesOverview,
+    };
+  } catch (error: any) {
+    console.error('getDashboardStats error:', error);
+    return {
+      totalProducts: 0,
+      totalValue: 0,
+      lowStockCount: 0,
+      outOfStockCount: 0,
+      lowStockItems: [],
+      recentActivity: [],
+      categoriesOverview: [],
+    };
   }
-
-  const categoriesOverview: ICategoryOverview[] = Array.from(categoryStatsMap.entries()).map(([id, stat]) => ({
-    _id: id,
-    name: stat.name,
-    slug: stat.slug,
-    productCount: stat.count,
-    totalValue: stat.value,
-  }));
-
-  const recentActivity = logs.map((l) => ({
-    _id: l._id ? l._id.toString() : Math.random().toString(),
-    productName: l.productName || 'Item',
-    sku: l.sku || '',
-    type: l.type,
-    quantity: l.quantity,
-    reason: l.reason || '',
-    timestamp: typeof l.timestamp === 'string' ? l.timestamp : new Date(l.timestamp).toLocaleString(),
-  }));
-
-  return {
-    totalProducts,
-    totalValue,
-    lowStockCount,
-    outOfStockCount,
-    lowStockItems,
-    recentActivity,
-    categoriesOverview,
-  };
 }
