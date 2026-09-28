@@ -1,13 +1,18 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import { FolderTree, ArrowRight, Package } from 'lucide-react';
 import { ICategoryOverview } from '@/lib/actions/dashboard';
+import { useAuth } from '@/lib/authContext';
 
 interface CategoriesOverviewProps {
   categories: ICategoryOverview[];
 }
 
 export default function CategoriesOverview({ categories }: CategoriesOverviewProps) {
+  const { isStaff } = useAuth();
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
       <div>
@@ -50,10 +55,17 @@ export default function CategoriesOverview({ categories }: CategoriesOverviewPro
                 </div>
 
                 <div className="mt-3 flex items-baseline justify-between">
-                  <span className="text-xs text-slate-400 font-medium">Category Value</span>
-                  <span className="text-sm font-extrabold text-[#00aeef]">
-                    {formattedValue}
-                  </span>
+                  {isStaff ? (
+                    <>
+                      <span className="text-xs text-slate-400 font-medium">Total Items</span>
+                      <span className="text-sm font-extrabold text-slate-700">{cat.productCount}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xs text-slate-400 font-medium">Category Value</span>
+                      <span className="text-sm font-extrabold text-[#00aeef]">{formattedValue}</span>
+                    </>
+                  )}
                 </div>
               </Link>
             );

@@ -61,7 +61,11 @@ export async function getProducts(
   }
 }
 
-export async function createProduct(data: any) {
+export async function createProduct(data: any, userRole?: string) {
+  if (userRole === 'STAFF' || userRole === 'Staff') {
+    throw new Error('403 Unauthorized: Staff role has view-only access and cannot create products.');
+  }
+
   try {
     const generatedBarcode =
       data.barcode || `890${Math.floor(100000000 + Math.random() * 900000000)}`;
@@ -130,7 +134,11 @@ export async function createProduct(data: any) {
   }
 }
 
-export async function updateProduct(id: string, data: any) {
+export async function updateProduct(id: string, data: any, userRole?: string) {
+  if (userRole === 'STAFF' || userRole === 'Staff') {
+    throw new Error('403 Unauthorized: Staff role has view-only access and cannot edit products.');
+  }
+
   try {
     const updated = await prisma.product.update({
       where: { id },
@@ -146,7 +154,7 @@ export async function updateProduct(id: string, data: any) {
         unit: data.unit,
         rackLocation: data.rackLocation,
         vendorId: data.vendor || null,
-        imageUrl: data.imageUrl,
+        imageUrl: data.imageUrl || undefined,
         description: data.description,
       },
       include: {
@@ -164,7 +172,11 @@ export async function updateProduct(id: string, data: any) {
   }
 }
 
-export async function deleteProduct(id: string) {
+export async function deleteProduct(id: string, userRole?: string) {
+  if (userRole === 'STAFF' || userRole === 'Staff') {
+    throw new Error('403 Unauthorized: Staff role has view-only access and cannot delete products.');
+  }
+
   try {
     const product = await prisma.product.findUnique({ where: { id } });
     if (product && product.categoryId) {
@@ -191,8 +203,12 @@ export async function recordPurchase(
   productId: string,
   quantity: number,
   costPrice: number,
-  supplier?: string
+  supplier?: string,
+  userRole?: string
 ) {
+  if (userRole === 'STAFF' || userRole === 'Staff') {
+    throw new Error('403 Unauthorized: Staff role cannot record inventory purchases.');
+  }
   try {
     const batchCode = `B${Date.now()}`;
     const supplierName = supplier && supplier.trim() !== '' ? supplier.trim() : 'General Supplier';

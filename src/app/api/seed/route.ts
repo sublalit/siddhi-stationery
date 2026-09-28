@@ -1,7 +1,17 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function GET() {
+import { Role } from '@prisma/client';
+
+export async function GET(req: Request) {
+  const userRole = req.headers.get('x-user-role');
+  if (userRole !== 'ADMIN' && userRole !== 'Admin') {
+    return NextResponse.json(
+      { success: false, error: '403 Forbidden: Only administrators can seed the database.' },
+      { status: 403 }
+    );
+  }
+
   try {
     // 1. Clean existing data (for seed refresh)
     await prisma.invoiceItem.deleteMany({});
@@ -18,7 +28,7 @@ export async function GET() {
       data: {
         name: 'Admin User',
         email: 'admin@siddhistationery.com',
-        role: 'admin',
+        role: Role.ADMIN,
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop',
       },
     });

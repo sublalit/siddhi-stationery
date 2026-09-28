@@ -8,6 +8,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+  CUSTOMER
+}
+
 model Category {
   id           String    @id @default(cuid())
   name         String    @unique
@@ -33,13 +40,15 @@ model Vendor {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  role      String   @default("admin")
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  supabaseAuthId String?  @unique
+  name           String
+  email          String   @unique
+  role           Role      @default(STAFF)
+  avatarUrl      String?
+  expenses       Expense[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Product {
@@ -139,3 +148,50 @@ model PrintingRequest {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+enum PaymentMode {
+  CASH
+  UPI
+}
+
+model Transaction {
+  id          String      @id @default(cuid())
+  amount      Float
+  paymentMode PaymentMode
+  note        String?
+  isVoid      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @default(now()) @updatedAt
+}
+
+model DailyLedger {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  openingBalance  Float    @default(0)
+  totalCash       Float
+  totalUPI        Float
+  totalSales      Float
+  totalExpenses   Float    @default(0)
+  netExpectedCash Float    @default(0)
+  isManualEntry   Boolean  @default(false)
+  closedByRole    String
+  createdAt       DateTime @default(now())
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  amount    Float
+  reason    String
+  userId    String?
+  addedBy   User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model QuickNotePreset {
+  id        String   @id @default(cuid())
+  text      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

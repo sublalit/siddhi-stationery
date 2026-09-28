@@ -3,6 +3,14 @@ import prisma from '@/lib/prisma';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userRole = req.headers.get('x-user-role');
+    if (userRole === 'STAFF' || userRole === 'Staff') {
+      return NextResponse.json(
+        { success: false, error: '403 Forbidden: Staff members cannot edit categories' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await req.json();
 
@@ -29,6 +37,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userRole = req.headers.get('x-user-role');
+    if (userRole === 'STAFF' || userRole === 'Staff') {
+      return NextResponse.json(
+        { success: false, error: '403 Forbidden: Staff members cannot delete categories' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     await prisma.category.delete({
       where: { id },

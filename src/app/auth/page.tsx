@@ -4,8 +4,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Package, Eye, EyeOff, ArrowRight, CheckCircle2 } from 'lucide-react';
 
+import { useAuth, UserRole } from '@/lib/authContext';
+import { syncUserRole } from '@/lib/actions/auth';
+
 export default function AuthPage() {
   const router = useRouter();
+  const { setAuthSession } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -13,41 +17,65 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e?: React.FormEvent, roleName = 'Admin User', prefillEmail?: string, prefillPass?: string) => {
+  const handleLogin = async (e?: React.FormEvent, roleName: UserRole = 'STAFF', prefillEmail?: string, prefillPass?: string) => {
     if (e) e.preventDefault();
     setLoading(true);
 
     const userEmail = prefillEmail || email || 'admin@example.com';
+    let userName = name || (userEmail.includes('staff') ? 'Staff User' : userEmail.includes('manager') ? 'Manager User' : 'Admin User');
+
+    let resolvedRole: UserRole = roleName;
+    if (userEmail.includes('staff')) resolvedRole = 'STAFF';
+    else if (userEmail.includes('manager')) resolvedRole = 'MANAGER';
+
+    try {
+      const synced = await syncUserRole(userEmail, resolvedRole, userName);
+      if (synced?.name) userName = synced.name;
+      if (synced?.role === 'ADMIN' || synced?.role === 'MANAGER' || synced?.role === 'STAFF') {
+        resolvedRole = synced.role;
+      }
+      if (synced?.email) {
+        setAuthSession({
+          email: synced.email,
+          role: resolvedRole,
+          name: userName,
+          avatarUrl: synced.avatarUrl ?? null,
+        });
+      } else {
+        setAuthSession({
+          email: userEmail,
+          role: resolvedRole,
+          name: userName,
+        });
+      }
+    } catch (err) {
+      console.error('syncUserRole error:', err);
+      setAuthSession({
+        email: userEmail,
+        role: resolvedRole,
+        name: userName,
+      });
+    }
 
     setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          'siddhi_auth',
-          JSON.stringify({
-            email: userEmail,
-            role: roleName,
-            isLoggedIn: true,
-          })
-        );
-      }
       setLoading(false);
       router.push('/');
-    }, 400);
+    }, 300);
   };
 
   const fillDemoAccount = (demoType: 'admin' | 'manager' | 'staff') => {
     if (demoType === 'admin') {
       setEmail('admin@example.com');
       setPassword('admin123');
-      handleLogin(undefined, 'Admin User', 'admin@example.com', 'admin123');
+      handleLogin(undefined, 'ADMIN', 'admin@example.com', 'admin123');
     } else if (demoType === 'manager') {
       setEmail('manager@example.com');
       setPassword('manager123');
-      handleLogin(undefined, 'Manager', 'manager@example.com', 'manager123');
+      handleLogin(undefined, 'MANAGER', 'manager@example.com', 'manager123');
     } else if (demoType === 'staff') {
       setEmail('staff@example.com');
       setPassword('staff123');
-      handleLogin(undefined, 'Staff', 'staff@example.com', 'staff123');
+      handleLogin(undefined, 'STAFF', 'staff@example.com', 'staff123');
     }
   };
 

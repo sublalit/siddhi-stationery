@@ -20,6 +20,8 @@ import RecordPurchaseModal from '@/components/products/RecordPurchaseModal';
 import ViewProductModal from '@/components/products/ViewProductModal';
 import PurchaseHistoryModal from '@/components/products/PurchaseHistoryModal';
 import PriceHistoryModal from '@/components/products/PriceHistoryModal';
+import { useAuth } from '@/lib/authContext';
+import { ShieldAlert } from 'lucide-react';
 import {
   getProducts,
   createProduct,
@@ -29,6 +31,7 @@ import {
 } from '@/lib/actions/products';
 
 function ProductsContent() {
+  const { role, isStaff } = useAuth();
   const searchParams = useSearchParams();
   const initialStockParam = searchParams.get('stockStatus') || 'all';
   const initialSearchParam = searchParams.get('search') || '';
@@ -100,16 +103,16 @@ function ProductsContent() {
 
   const handleSaveProduct = async (formData: any) => {
     if (editingProduct) {
-      await updateProduct(editingProduct._id, formData);
+      await updateProduct(editingProduct._id, formData, role);
     } else {
-      await createProduct(formData);
+      await createProduct(formData, role);
     }
     await fetchProductData();
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (confirm('Are you sure you want to delete this stationery item?')) {
-      await deleteProduct(id);
+      await deleteProduct(id, role);
       await fetchProductData();
     }
   };
@@ -120,7 +123,7 @@ function ProductsContent() {
     costPrice: number,
     supplier?: string
   ) => {
-    await recordPurchase(productId, quantity, costPrice, supplier);
+    await recordPurchase(productId, quantity, costPrice, supplier, role);
     await fetchProductData();
   };
 
@@ -136,7 +139,7 @@ function ProductsContent() {
         <span className="text-slate-800 font-semibold">Products</span>
       </div>
 
-      {/* Header & Main Actions matching Lovable prototype screenshot */}
+      {/* Header & Main Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Products</h1>
@@ -147,28 +150,35 @@ function ProductsContent() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (products.length > 0) setPurchasingProduct(products[0]);
-              setIsRecordPurchaseOpen(true);
-            }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
-          >
-            <ShoppingCart className="w-4 h-4 text-[#00aeef]" />
-            <span>Record Purchase</span>
-          </button>
-          <button
-            onClick={() => {
-              setEditingProduct(null);
-              setIsAddModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#00aeef] to-[#0284c7] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Product</span>
-          </button>
-        </div>
+        {isStaff ? (
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 shadow-2xs">
+            <ShieldAlert className="w-4 h-4 text-amber-600" />
+            <span>View-Only Mode (Staff Access)</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (products.length > 0) setPurchasingProduct(products[0]);
+                setIsRecordPurchaseOpen(true);
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+            >
+              <ShoppingCart className="w-4 h-4 text-[#00aeef]" />
+              <span>Record Purchase</span>
+            </button>
+            <button
+              onClick={() => {
+                setEditingProduct(null);
+                setIsAddModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#00aeef] to-[#0284c7] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Product</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filter Bar */}

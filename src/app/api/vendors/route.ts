@@ -21,6 +21,14 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const userRole = req.headers.get('x-user-role');
+    if (userRole === 'STAFF' || userRole === 'Staff') {
+      return NextResponse.json(
+        { success: false, error: '403 Forbidden: Staff members cannot create vendors' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     if (!body.name || body.name.trim() === '') {
       return NextResponse.json({ success: false, error: 'Vendor name is required' }, { status: 400 });

@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Eye, Edit3, Trash2, Clock, TrendingUp } from 'lucide-react';
+import { Eye, Edit3, Trash2, Clock, TrendingUp, ShieldAlert } from 'lucide-react';
+import { useAuth } from '@/lib/authContext';
 
 interface ProductCardProps {
   product: any;
@@ -20,6 +21,7 @@ export default function ProductCard({
   onOpenPurchases,
   onOpenPrices,
 }: ProductCardProps) {
+  const { isStaff } = useAuth();
   const stock = Number(product.currentStock) || 0;
   const minStock = Number(product.minStock) || 5;
   const sellingPrice = (Number(product.sellingPrice) || 0).toFixed(2);
@@ -49,7 +51,7 @@ export default function ProductCard({
           />
         </div>
 
-        {/* Product Info matching Image 3 */}
+        {/* Product Info */}
         <div className="p-4 space-y-2">
           <h3 className="text-base font-bold text-[#00aeef] hover:underline cursor-pointer line-clamp-1" onClick={() => onView(product)}>
             {product.name}
@@ -85,35 +87,50 @@ export default function ProductCard({
         </div>
       </div>
 
-      {/* Action Buttons Row matching Image 3 */}
+      {/* Action Buttons Row */}
       <div className="p-4 pt-0 space-y-3 bg-white">
-        {/* Row 1: View, Edit, Trash */}
-        <div className="grid grid-cols-12 gap-2">
-          <button
-            onClick={() => onView(product)}
-            className="col-span-5 flex items-center justify-center gap-1.5 py-2 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors"
-          >
-            <Eye className="w-4 h-4 text-slate-700" />
-            <span>View</span>
-          </button>
+        {/* Row 1: View, Edit, Trash (or View-Only for Staff) */}
+        {isStaff ? (
+          <div className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 p-2 rounded-xl">
+            <button
+              onClick={() => onView(product)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 hover:bg-slate-100 transition-colors shadow-2xs"
+            >
+              <Eye className="w-4 h-4 text-[#00aeef]" />
+              <span>View Details</span>
+            </button>
+            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 flex items-center gap-1">
+              <ShieldAlert className="w-3 h-3 text-amber-600" /> Staff
+            </span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-12 gap-2">
+            <button
+              onClick={() => onView(product)}
+              className="col-span-5 flex items-center justify-center gap-1.5 py-2 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors"
+            >
+              <Eye className="w-4 h-4 text-slate-700" />
+              <span>View</span>
+            </button>
 
-          <button
-            onClick={() => onEdit(product)}
-            className="col-span-5 flex items-center justify-center gap-1.5 py-2 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors"
-          >
-            <Edit3 className="w-4 h-4 text-slate-700" />
-            <span>Edit</span>
-          </button>
+            <button
+              onClick={() => onEdit(product)}
+              className="col-span-5 flex items-center justify-center gap-1.5 py-2 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 hover:bg-slate-50 transition-colors"
+            >
+              <Edit3 className="w-4 h-4 text-slate-700" />
+              <span>Edit</span>
+            </button>
 
-          <button
-            onClick={() => onDelete(product._id)}
-            className="col-span-2 flex items-center justify-center py-2 px-2 bg-white border border-red-200 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-colors"
-          >
-            <Trash2 className="w-4 h-4 text-red-500" />
-          </button>
-        </div>
+            <button
+              onClick={() => onDelete(product._id)}
+              className="col-span-2 flex items-center justify-center py-2 px-2 bg-white border border-red-200 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4 text-red-500" />
+            </button>
+          </div>
+        )}
 
-        {/* Row 2: Purchases & Prices matching Image 3 */}
+        {/* Row 2: Purchases & Prices */}
         <div className="grid grid-cols-2 gap-4 pt-1 text-xs font-bold text-slate-800">
           <button
             onClick={() => onOpenPurchases(product)}

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Eye, Edit3, Trash2, Clock, TrendingUp } from 'lucide-react';
+import { useAuth } from '@/lib/authContext';
 
 interface ProductTableProps {
   products: any[];
@@ -20,6 +21,7 @@ export default function ProductTable({
   onOpenPurchases,
   onOpenPrices,
 }: ProductTableProps) {
+  const { isStaff } = useAuth();
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
       <div className="overflow-x-auto">
@@ -112,20 +114,24 @@ export default function ProductTable({
                       >
                         <TrendingUp className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => onEdit(p)}
-                        className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-                        title="Edit Item"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => onDelete(p._id)}
-                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                        title="Delete Item"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!isStaff && (
+                        <>
+                          <button
+                            onClick={() => onEdit(p)}
+                            className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                            title="Edit Item"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDelete(p._id)}
+                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            title="Delete Item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

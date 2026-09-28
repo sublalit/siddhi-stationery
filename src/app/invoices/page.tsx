@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Home, ChevronRight, Printer, Eye, CheckCircle2, Clock, AlertCircle, X } from 'lucide-react';
+import { FileText, Plus, Home, ChevronRight, Printer, Eye, CheckCircle2, Clock, AlertCircle, X, ShieldAlert } from 'lucide-react';
 import CreateInvoiceModal from '@/components/invoices/CreateInvoiceModal';
 import { getInvoices, createInvoice, updateInvoiceStatus } from '@/lib/actions/invoices';
 import { getProducts } from '@/lib/actions/products';
+import { useAuth } from '@/lib/authContext';
 
 export default function InvoicesPage() {
+  const { role, isStaff } = useAuth();
   const [invoices, setInvoices] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +35,14 @@ export default function InvoicesPage() {
   }, [selectedStatus]);
 
   const handleSaveInvoice = async (invoiceData: any) => {
-    await createInvoice(invoiceData);
+    if (isStaff) return;
+    await createInvoice(invoiceData, role);
     await fetchData();
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    await updateInvoiceStatus(id, newStatus);
+    if (isStaff) return;
+    await updateInvoiceStatus(id, newStatus, role);
     await fetchData();
   };
 
@@ -63,13 +67,20 @@ export default function InvoicesPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#00aeef] to-[#0284c7] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Invoice</span>
-        </button>
+        {isStaff ? (
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-800 shadow-2xs">
+            <ShieldAlert className="w-4 h-4 text-amber-600" />
+            <span>View-Only Mode (Staff Access)</span>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#00aeef] to-[#0284c7] text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Invoice</span>
+          </button>
+        )}
       </div>
 
       {/* Status Tabs */}

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, PackagePlus } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, PackagePlus, Upload } from 'lucide-react';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -37,6 +37,12 @@ export default function AddProductModal({
     isCustomPrinting: false,
   });
   const [loading, setLoading] = useState(false);
+  const [optimizingImage, setOptimizingImage] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -69,24 +75,67 @@ export default function AddProductModal({
         costPrice: '70',
         unit: 'units',
         rackLocation: 'A1-B1-S1',
-        imageUrl: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&auto=format&fit=crop',
+        imageUrl: '',
         description: '',
         isCustomPrinting: false,
       });
     }
+    setImageFile(null);
+    setPreviewUrl('');
+    setUploadError('');
+    setOptimizingImage(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, [initialData, categories, vendors, isOpen]);
 
+  useEffect(() => {
+    if (!imageFile) return;
+    const objectUrl = URL.createObjectURL(imageFile);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [imageFile]);
+
   if (!isOpen) return null;
+
+  const applyImageFile = (file?: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please choose an image file (JPEG, PNG, GIF, or WebP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be 5MB or smaller.');
+      return;
+    }
+    setUploadError('');
+    setImageFile(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
-      await onSave(formData);
+      setUploadError('');
+      let imageUrl = formData.imageUrl;
+
+      if (imageFile) {
+        setOptimizingImage(true);
+        const payload = new FormData();
+        payload.append('file', imageFile);
+        const res = await fetch('/api/uploads', { method: 'POST', body: payload });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.url) {
+          throw new Error(json.error || 'Failed to upload image');
+        }
+        imageUrl = json.url;
+      }
+
+      await onSave({ ...formData, imageUrl });
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setUploadError(err?.message || 'Could not save the product image.');
     } finally {
+      setOptimizingImage(false);
       setLoading(false);
     }
   };
@@ -257,14 +306,98 @@ export default function AddProductModal({
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Image URL</label>
+            <label className="block font-semibold text-slate-700 mb-1">Product Image</label>
             <input
-              type="text"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              placeholder="https://images.unsplash.com/..."
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-[#00aeef]"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => applyImageFile(e.target.files?.[0])}
             />
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragActive(false);
+                applyImageFile(e.dataTransfer.files?.[0]);
+              }}
+              className={`w-full rounded-xl border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors ${
+                dragActive
+                  ? 'border-[#00aeef] bg-cyan-50'
+                  : 'border-slate-200 hover:border-[#00aeef] hover:bg-slate-50'
+              }`}
+            >
+              <Upload className="w-6 h-6 mx-auto mb-2 text-[#00aeef]" />
+              <p className="font-semibold text-slate-700">Drag and drop an image here</p>
+              <p className="text-slate-500 mt-1">or click to browse — converted to WebP, max 800px (JPEG, PNG, GIF, WebP · 5MB)</p>
+            </div>
+            {(previewUrl || formData.imageUrl) && (
+              <div className="mt-3 flex items-center gap-3">
+                <div className="relative w-16 h-16 shrink-0">
+                  <img
+                    src={previewUrl || formData.imageUrl}
+                    alt="Selected product"
+                    className="w-16 h-16 rounded-xl object-cover border border-slate-200 bg-slate-100"
+                  />
+                  {optimizingImage && (
+                    <div className="absolute inset-0 rounded-xl bg-slate-900/50 flex items-center justify-center">
+                      <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-700 truncate">
+                    {imageFile?.name || 'Current product image'}
+                  </p>
+                  <p className="text-slate-500">
+                    {optimizingImage
+                      ? 'Optimizing to WebP (max 800px, 80% quality)…'
+                      : imageFile
+                        ? 'Saved as compressed WebP when you save'
+                        : 'Current product image'}
+                  </p>
+                  {imageFile && !optimizingImage && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageFile(null);
+                        setPreviewUrl('');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      className="mt-1 text-[#00aeef] font-semibold hover:underline"
+                    >
+                      Remove selected file
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {uploadError && <p className="mt-2 text-red-500 font-semibold">{uploadError}</p>}
           </div>
 
           <div className="flex items-center gap-2 pt-1">

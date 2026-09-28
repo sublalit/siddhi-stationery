@@ -45,7 +45,10 @@ export async function getInvoices(status?: string) {
   }
 }
 
-export async function createInvoice(data: any) {
+export async function createInvoice(data: any, userRole?: string) {
+  if (userRole === 'STAFF' || userRole === 'Staff') {
+    throw new Error('403 Unauthorized: Staff role cannot create invoices.');
+  }
   try {
     const count = await prisma.invoice.count();
     const invoiceNumber = `INV-2026-${String(count + 1).padStart(3, '0')}`;
@@ -126,7 +129,10 @@ export async function createInvoice(data: any) {
   }
 }
 
-export async function updateInvoiceStatus(id: string, status: string) {
+export async function updateInvoiceStatus(id: string, status: string, userRole?: string) {
+  if (userRole === 'STAFF' || userRole === 'Staff') {
+    throw new Error('403 Unauthorized: Staff role cannot update invoice status.');
+  }
   try {
     const updated = await prisma.invoice.update({
       where: { id },
