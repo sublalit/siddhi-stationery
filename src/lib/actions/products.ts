@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { getScopeWhere } from '@/lib/dataScope';
 
 function formatProduct(p: any) {
   if (!p) return null;
@@ -13,6 +14,24 @@ function formatProduct(p: any) {
   };
 }
 
+async function assertInScope(
+  scope: { isDemo: boolean },
+  ids: { productId?: string; categoryId?: string | null; vendorId?: string | null }
+) {
+  if (ids.productId) {
+    const found = await prisma.product.findFirst({ where: { id: ids.productId, ...scope }, select: { id: true } });
+    if (!found) throw new Error('Product not found');
+  }
+  if (ids.categoryId) {
+    const found = await prisma.category.findFirst({ where: { id: ids.categoryId, ...scope }, select: { id: true } });
+    if (!found) throw new Error('Category not found');
+  }
+  if (ids.vendorId) {
+    const found = await prisma.vendor.findFirst({ where: { id: ids.vendorId, ...scope }, select: { id: true } });
+    if (!found) throw new Error('Vendor not found');
+  }
+}
+
 export async function getProducts(
   search?: string,
   categoryId?: string,
@@ -20,7 +39,7 @@ export async function getProducts(
   vendorId?: string
 ) {
   try {
-    const where: any = {};
+    const where: any = { ...(await getScopeWhere()) };
 
     if (search && search.trim() !== '') {
       const q = search.trim();
@@ -67,6 +86,9 @@ export async function createProduct(data: any, userRole?: string) {
   }
 
   try {
+    const scope = await getScopeWhere();
+    await assertInScope(scope, { categoryId: data.category, vendorId: data.vendor || null });
+
     const generatedBarcode =
       data.barcode || `890${Math.floor(100000000 + Math.random() * 900000000)}`;
 
@@ -89,6 +111,7 @@ export async function createProduct(data: any, userRole?: string) {
           'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&auto=format&fit=crop',
         description: data.description || '',
         isCustomPrinting: Boolean(data.isCustomPrinting),
+        isDemo: scope.isDemo,
       },
       include: {
         category: true,
@@ -120,6 +143,7 @@ export async function createProduct(data: any, userRole?: string) {
             batch: `B${Date.now()}`,
             reason: 'Initial Product Intake',
             performedBy: 'Admin User',
+            isDemo: scope.isDemo,
           },
         })
         .catch(() => {});
@@ -140,6 +164,9 @@ export async function updateProduct(id: string, data: any, userRole?: string) {
   }
 
   try {
+    const scope = await getScopeWhere();
+    await assertInScope(scope, { productId: id, categoryId: data.category, vendorId: data.vendor || null });
+
     const updated = await prisma.product.update({
       where: { id },
       data: {
@@ -178,8 +205,11 @@ export async function deleteProduct(id: string, userRole?: string) {
   }
 
   try {
-    const product = await prisma.product.findUnique({ where: { id } });
-    if (product && product.categoryId) {
+    const scope = await getScopeWhere();
+    const product = await prisma.product.findFirst({ where: { id, ...scope } });
+    if (!product) throw new Error('Product not found');
+
+    if (product.categoryId) {
       await prisma.category
         .update({
           where: { id: product.categoryId },
@@ -210,10 +240,11 @@ export async function recordPurchase(
     throw new Error('403 Unauthorized: Staff role cannot record inventory purchases.');
   }
   try {
+    const scope = await getScopeWhere();
     const batchCode = `B${Date.now()}`;
     const supplierName = supplier && supplier.trim() !== '' ? supplier.trim() : 'General Supplier';
 
-    const product = await prisma.product.findUnique({ where: { id: productId } });
+    const product = await prisma.product.findFirst({ where: { id: productId, ...scope } });
     if (!product) throw new Error('Product not found');
 
     const updatedProduct = await prisma.product.update({
@@ -241,6 +272,7 @@ export async function recordPurchase(
         batch: batchCode,
         reason: 'Purchase Intake',
         performedBy: 'Admin User',
+        isDemo: scope.isDemo,
       },
     });
 
@@ -255,8 +287,10 @@ export async function recordPurchase(
 
 export async function getProductPurchaseHistory(productId: string, sku?: string) {
   try {
+    const scope = await getScopeWhere();
     const logs = await prisma.inventoryLog.findMany({
       where: {
+        ...scope,
         type: 'Stock In',
         OR: [
           { productId: productId },
@@ -279,9 +313,11 @@ export async function getProductPurchaseHistory(productId: string, sku?: string)
 
 export async function getProductPriceHistory(productId: string, sku?: string) {
   try {
-    const product = await prisma.product.findUnique({ where: { id: productId } });
+    const scope = await getScopeWhere();
+    const product = await prisma.product.findFirst({ where: { id: productId, ...scope } });
     const purchases = await prisma.inventoryLog.findMany({
       where: {
+        ...scope,
         type: 'Stock In',
         OR: [
           { productId: productId },

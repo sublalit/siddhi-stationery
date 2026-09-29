@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Package, Eye, EyeOff, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 import { useAuth, UserRole } from '@/lib/authContext';
 import { syncUserRole } from '@/lib/actions/auth';
+import { createSupabaseBrowserClient } from '@/lib/supabaseBrowser';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -16,50 +18,83 @@ export default function AuthPage() {
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const handleLogin = async (e?: React.FormEvent, roleName: UserRole = 'STAFF', prefillEmail?: string, prefillPass?: string) => {
     if (e) e.preventDefault();
     setLoading(true);
+    setAuthError(null);
 
-    const userEmail = prefillEmail || email || 'admin@example.com';
-    let userName = name || (userEmail.includes('staff') ? 'Staff User' : userEmail.includes('manager') ? 'Manager User' : 'Admin User');
+    const userEmail = prefillEmail || email;
+    const userPassword = prefillPass || password;
+    if (!userEmail || !userPassword) {
+      setAuthError('Email and password are required.');
+      setLoading(false);
+      return;
+    }
 
+    let userName = name || userEmail.split('@')[0];
     let resolvedRole: UserRole = roleName;
     if (userEmail.includes('staff')) resolvedRole = 'STAFF';
     else if (userEmail.includes('manager')) resolvedRole = 'MANAGER';
+    else if (userEmail.includes('admin')) resolvedRole = 'ADMIN';
+
+    let syncedIsApproved = false;
 
     try {
-      const synced = await syncUserRole(userEmail, resolvedRole, userName);
+      const supabase = createSupabaseBrowserClient();
+      const authResult = isSignUp && !prefillEmail
+        ? await supabase.auth.signUp({
+            email: userEmail,
+            password: userPassword,
+            options: { data: { name: userName } },
+          })
+        : await supabase.auth.signInWithPassword({
+            email: userEmail,
+            password: userPassword,
+          });
+
+      if (authResult.error || !authResult.data.user) {
+        setAuthError(authResult.error?.message || 'Sign in failed.');
+        setLoading(false);
+        return;
+      }
+
+      if (!authResult.data.session) {
+        setAuthError('Confirm your email, then sign in. New accounts stay on the approval page until an admin allows access.');
+        setLoading(false);
+        return;
+      }
+
+      const synced = await syncUserRole(
+        userEmail,
+        resolvedRole,
+        userName,
+        authResult.data.user.id
+      );
       if (synced?.name) userName = synced.name;
       if (synced?.role === 'ADMIN' || synced?.role === 'MANAGER' || synced?.role === 'STAFF') {
         resolvedRole = synced.role;
       }
-      if (synced?.email) {
-        setAuthSession({
-          email: synced.email,
-          role: resolvedRole,
-          name: userName,
-          avatarUrl: synced.avatarUrl ?? null,
-        });
-      } else {
-        setAuthSession({
-          email: userEmail,
-          role: resolvedRole,
-          name: userName,
-        });
-      }
-    } catch (err) {
-      console.error('syncUserRole error:', err);
+      syncedIsApproved = Boolean(synced?.isApproved);
       setAuthSession({
-        email: userEmail,
+        email: synced?.email || userEmail,
         role: resolvedRole,
         name: userName,
+        avatarUrl: synced?.avatarUrl ?? null,
       });
+    } catch (err) {
+      console.error('sign in error:', err);
+      setAuthError('Sign in failed. Please try again.');
+      setLoading(false);
+      return;
     }
+
+    const destination = syncedIsApproved ? '/' : '/pending';
 
     setTimeout(() => {
       setLoading(false);
-      router.push('/');
+      router.push(destination);
     }, 300);
   };
 
@@ -177,7 +212,16 @@ export default function AuthPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {!isSignUp && (
+              <div className="flex justify-end pt-1">
+                <Link href="/forgot-password" className="text-[#00aeef] font-semibold hover:underline">
+                  Forgot Password?
+                </Link>
+              </div>
+            )}
           </div>
+
+          {authError && <p className="text-xs font-semibold text-red-600">{authError}</p>}
 
           <button
             type="submit"

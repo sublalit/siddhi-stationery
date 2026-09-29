@@ -6,9 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   Package,
   Settings,
-  RefreshCw,
   ChevronDown,
-  CheckCircle2,
   Menu,
   X,
   LayoutDashboard,
@@ -40,11 +38,9 @@ const mobileNavItems = [
 
 export default function TopHeader() {
   const pathname = usePathname();
-  const { role, name, email, avatarUrl, isLoading, isAdmin } = useAuth();
+  const { role, name, email, avatarUrl, isLoading } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const [seedMessage, setSeedMessage] = useState<string | null>(null);
 
   const roleDisplayNames: Record<UserRole, string> = {
     ADMIN: 'Admin',
@@ -52,30 +48,6 @@ export default function TopHeader() {
     STAFF: 'Staff',
   };
   const displayName = name?.trim() || email || roleDisplayNames[role];
-
-  const handleSeedDatabase = async () => {
-    try {
-      setSeeding(true);
-      setSeedMessage(null);
-      const res = await fetch('/api/seed', {
-        headers: { 'x-user-role': role },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSeedMessage('Database Seeded Successfully!');
-        setTimeout(() => {
-          setSeedMessage(null);
-          window.location.reload();
-        }, 1200);
-      } else {
-        setSeedMessage(`Seed failed: ${data.error}`);
-      }
-    } catch (err: any) {
-      setSeedMessage(`Error: ${err?.message || 'Failed'}`);
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   return (
     <header className="no-print bg-gradient-to-r from-[#00aeef] via-[#0284c7] to-[#0369a1] text-white shadow-md sticky top-0 z-50">
@@ -118,26 +90,6 @@ export default function TopHeader() {
             <Zap className="w-3.5 h-3.5 text-cyan-200 fill-cyan-200" />
             <span className="hidden sm:inline">Quick Sale</span>
           </Link>
-
-          {/* Seed Database Button */}
-          {isAdmin && (
-            <button
-              onClick={handleSeedDatabase}
-              disabled={seeding}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold text-white transition-all shadow-sm active:scale-95 disabled:opacity-50"
-              title="Populate demo stationery dataset"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${seeding ? 'animate-spin' : ''}`} />
-              {seeding ? 'Seeding...' : 'Seed Data'}
-            </button>
-          )}
-
-          {seedMessage && (
-            <span className="hidden lg:flex items-center gap-1 text-xs bg-emerald-500/90 text-white px-2.5 py-1 rounded-full animate-bounce">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              {seedMessage}
-            </span>
-          )}
 
           {/* Authenticated user menu */}
           <div className="relative">
@@ -257,20 +209,6 @@ export default function TopHeader() {
             </div>
 
             <div className="pt-4 border-t border-slate-800 space-y-3">
-              {isAdmin && (
-                <button
-                  onClick={() => {
-                    handleSeedDatabase();
-                    setMobileDrawerOpen(false);
-                  }}
-                  disabled={seeding}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${seeding ? 'animate-spin' : ''}`} />
-                  <span>{seeding ? 'Seeding...' : 'Seed Demo Data'}</span>
-                </button>
-              )}
-
               <div className="flex items-center justify-between text-[10px] text-slate-400 px-1 font-mono">
                 <span>Status: Online</span>
                 <span>v1.0.0</span>

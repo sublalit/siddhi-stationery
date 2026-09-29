@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { getScopeWhere } from '@/lib/dataScope';
 
 export type PaymentModeType = 'CASH' | 'UPI';
 
@@ -43,9 +44,11 @@ export async function createQuickTransaction(data: CreateQuickTransactionInput) 
       return { success: false, error: 'Payment mode must be CASH or UPI' };
     }
 
+    const scope = await getScopeWhere();
     const transaction = await prisma.transaction.create({
       data: {
         amount,
+        isDemo: scope.isDemo,
         paymentMode: data.paymentMode,
         note: data.note?.trim() || null,
       },
@@ -69,8 +72,9 @@ export async function createQuickTransaction(data: CreateQuickTransactionInput) 
  */
 export async function voidSale(id: string, userRole?: string) {
   try {
-    const existing = await prisma.transaction.findUnique({
-      where: { id },
+    const scope = await getScopeWhere();
+    const existing = await prisma.transaction.findFirst({
+      where: { id, ...scope },
     });
 
     if (!existing) {
@@ -111,8 +115,9 @@ export async function deleteQuickTransaction(id: string, userRole?: string) {
  */
 export async function togglePaymentMode(id: string, userRole?: string) {
   try {
-    const existing = await prisma.transaction.findUnique({
-      where: { id },
+    const scope = await getScopeWhere();
+    const existing = await prisma.transaction.findFirst({
+      where: { id, ...scope },
     });
 
     if (!existing) {
@@ -172,7 +177,9 @@ export async function getQuickNotePresets(): Promise<{
   error?: string;
 }> {
   try {
+    const scope = await getScopeWhere();
     let presets = await prisma.quickNotePreset.findMany({
+      where: scope,
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
     });
 
@@ -182,11 +189,13 @@ export async function getQuickNotePresets(): Promise<{
         data: DEFAULT_NOTE_PRESETS.map((text, idx) => ({
           text,
           order: idx,
+          isDemo: scope.isDemo,
         })),
         skipDuplicates: true,
       });
 
       presets = await prisma.quickNotePreset.findMany({
+        where: scope,
         orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       });
     }
@@ -229,8 +238,10 @@ export async function createQuickNotePreset(text: string): Promise<{
     }
 
     // Check for existing case-insensitively
+    const scope = await getScopeWhere();
     const existing = await prisma.quickNotePreset.findFirst({
       where: {
+        ...scope,
         text: {
           equals: trimmed,
           mode: 'insensitive',
@@ -246,11 +257,12 @@ export async function createQuickNotePreset(text: string): Promise<{
       };
     }
 
-    const count = await prisma.quickNotePreset.count();
+    const count = await prisma.quickNotePreset.count({ where: scope });
     const preset = await prisma.quickNotePreset.create({
       data: {
         text: trimmed,
         order: count,
+        isDemo: scope.isDemo,
       },
     });
 
@@ -273,9 +285,13 @@ export async function createQuickNotePreset(text: string): Promise<{
  */
 export async function deleteQuickNotePreset(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    await prisma.quickNotePreset.delete({
-      where: { id },
+    const scope = await getScopeWhere();
+    const { count } = await prisma.quickNotePreset.deleteMany({
+      where: { id, ...scope },
     });
+    if (count === 0) {
+      return { success: false, error: 'Preset not found' };
+    }
 
     revalidatePath('/quick-sale');
     revalidatePath('/');
@@ -317,11 +333,13 @@ export async function recordExpense(data: RecordExpenseInput, userRole?: string)
       }
     }
 
+    const scope = await getScopeWhere();
     const expense = await prisma.expense.create({
       data: {
         amount,
         reason: data.reason.trim(),
         userId,
+        isDemo: scope.isDemo,
       },
       include: {
         addedBy: {
@@ -365,7 +383,8 @@ export async function updateExpense(
       return { success: false, error: 'Reason is required' };
     }
 
-    const existing = await prisma.expense.findUnique({ where: { id } });
+    const scope = await getScopeWhere();
+    const existing = await prisma.expense.findFirst({ where: { id, ...scope } });
     if (!existing) {
       return { success: false, error: 'Expense voucher not found' };
     }
@@ -374,6 +393,7 @@ export async function updateExpense(
     const { start, end } = getDayBounds(new Date(existing.createdAt));
     const ledger = await prisma.dailyLedger.findFirst({
       where: {
+        ...scope,
         date: {
           gte: start,
           lte: end,
@@ -419,7 +439,8 @@ export async function deleteExpense(id: string, userRole?: string) {
   }
 
   try {
-    const existing = await prisma.expense.findUnique({ where: { id } });
+    const scope = await getScopeWhere();
+    const existing = await prisma.expense.findFirst({ where: { id, ...scope } });
     if (!existing) {
       return { success: false, error: 'Expense voucher not found' };
     }
@@ -428,6 +449,7 @@ export async function deleteExpense(id: string, userRole?: string) {
     const { start, end } = getDayBounds(new Date(existing.createdAt));
     const ledger = await prisma.dailyLedger.findFirst({
       where: {
+        ...scope,
         date: {
           gte: start,
           lte: end,
@@ -476,9 +498,11 @@ export async function setOpeningCashBalance(
 
     const targetDate = data.date ? new Date(data.date) : new Date();
     const { start, end, normalized } = getDayBounds(targetDate);
+    const scope = await getScopeWhere();
 
     const existing = await prisma.dailyLedger.findFirst({
       where: {
+        ...scope,
         date: {
           gte: start,
           lte: end,
@@ -509,6 +533,7 @@ export async function setOpeningCashBalance(
           netExpectedCash: openingBalance,
           isManualEntry: false,
           closedByRole: userRole || 'ADMIN',
+          isDemo: scope.isDemo,
         },
       });
     }
@@ -530,7 +555,9 @@ export async function setOpeningCashBalance(
  */
 export async function getRecentTransactions(limit = 15) {
   try {
+    const scope = await getScopeWhere();
     const transactions = await prisma.transaction.findMany({
+      where: scope,
       take: limit,
       orderBy: { createdAt: 'desc' },
     });
@@ -569,10 +596,12 @@ export async function getTodaySalesStats(userRole?: string) {
 
   try {
     const { start, end, normalized } = getDayBounds();
+    const scope = await getScopeWhere();
 
     // Fetch transactions
     const transactions = await prisma.transaction.findMany({
       where: {
+        ...scope,
         createdAt: {
           gte: start,
           lte: end,
@@ -584,6 +613,7 @@ export async function getTodaySalesStats(userRole?: string) {
     // Fetch expenses
     const expenses = await prisma.expense.findMany({
       where: {
+        ...scope,
         createdAt: {
           gte: start,
           lte: end,
@@ -626,6 +656,7 @@ export async function getTodaySalesStats(userRole?: string) {
     // Check if day is already in DailyLedger (for opening balance or closure)
     const existingLedger = await prisma.dailyLedger.findFirst({
       where: {
+        ...scope,
         date: {
           gte: start,
           lte: end,
@@ -697,10 +728,12 @@ export async function checkPendingDayClosings(userRole?: string) {
 
   try {
     const { start: todayStart } = getDayBounds(new Date());
+    const scope = await getScopeWhere();
 
     // Find all transactions before today
     const pastTransactions = await prisma.transaction.findMany({
       where: {
+        ...scope,
         createdAt: {
           lt: todayStart,
         },
@@ -719,6 +752,7 @@ export async function checkPendingDayClosings(userRole?: string) {
     // Find all expenses before today
     const pastExpenses = await prisma.expense.findMany({
       where: {
+        ...scope,
         createdAt: {
           lt: todayStart,
         },
@@ -752,6 +786,7 @@ export async function checkPendingDayClosings(userRole?: string) {
       // Check if DailyLedger already exists and is closed for this day
       const existingLedger = await prisma.dailyLedger.findFirst({
         where: {
+          ...scope,
           date: {
             gte: start,
             lte: end,
@@ -842,10 +877,12 @@ export async function closeBackdatedDay(
   try {
     const targetDate = new Date(data.date);
     const { start, end, normalized } = getDayBounds(targetDate);
+    const scope = await getScopeWhere();
 
     // Fetch expenses for that backdated day
     const dayExpenses = await prisma.expense.findMany({
       where: {
+        ...scope,
         createdAt: {
           gte: start,
           lte: end,
@@ -863,7 +900,7 @@ export async function closeBackdatedDay(
 
     if (isNaN(totalCash) || isNaN(totalUPI)) {
       const dayTxs = await prisma.transaction.findMany({
-        where: { createdAt: { gte: start, lte: end }, isVoid: false },
+        where: { ...scope, createdAt: { gte: start, lte: end }, isVoid: false },
       });
       totalCash = dayTxs.filter((t) => t.paymentMode === 'CASH').reduce((s, t) => s + t.amount, 0);
       totalUPI = dayTxs.filter((t) => t.paymentMode === 'UPI').reduce((s, t) => s + t.amount, 0);
@@ -878,6 +915,7 @@ export async function closeBackdatedDay(
 
     const existing = await prisma.dailyLedger.findFirst({
       where: {
+        ...scope,
         date: {
           gte: start,
           lte: end,
@@ -912,6 +950,7 @@ export async function closeBackdatedDay(
           netExpectedCash,
           isManualEntry: Boolean(data.isManualEntry),
           closedByRole: data.closedByRole || userRole || 'ADMIN',
+          isDemo: scope.isDemo,
         },
       });
     }
@@ -948,9 +987,11 @@ export async function getDailyLedgerHistory(
     const selectedYear =
       typeof year === 'number' && year >= 2026 ? year : now.getFullYear();
     const { start, end } = getMonthBounds(selectedYear, selectedMonth);
+    const scope = await getScopeWhere();
 
     const records = await prisma.dailyLedger.findMany({
       where: {
+        ...scope,
         date: {
           gte: start,
           lte: end,
@@ -992,10 +1033,12 @@ export async function closeDayEndLedger(data: CloseDayEndInput, userRole?: strin
 
     const targetDate = data.date ? new Date(data.date) : new Date();
     const { start, end, normalized } = getDayBounds(targetDate);
+    const scope = await getScopeWhere();
 
     // Look for existing ledger entry for the day to check opening balance
     const existing = await prisma.dailyLedger.findFirst({
       where: {
+        ...scope,
         date: {
           gte: start,
           lte: end,
@@ -1011,7 +1054,7 @@ export async function closeDayEndLedger(data: CloseDayEndInput, userRole?: strin
     let totalExpenses = Number(data.totalExpenses);
     if (isNaN(totalExpenses) || totalExpenses < 0) {
       const dayExpenses = await prisma.expense.findMany({
-        where: { createdAt: { gte: start, lte: end } },
+        where: { ...scope, createdAt: { gte: start, lte: end } },
       });
       totalExpenses = dayExpenses.reduce((acc, curr) => acc + curr.amount, 0);
     }
@@ -1047,6 +1090,7 @@ export async function closeDayEndLedger(data: CloseDayEndInput, userRole?: strin
           netExpectedCash,
           isManualEntry,
           closedByRole: roleToStore,
+          isDemo: scope.isDemo,
         },
       });
     }
@@ -1081,10 +1125,12 @@ export async function getDailyLedgerDetails(date: string | Date, userRole?: stri
   try {
     const targetDate = new Date(date);
     const { start, end } = getDayBounds(targetDate);
+    const scope = await getScopeWhere();
 
     const [transactions, expenses] = await Promise.all([
       prisma.transaction.findMany({
         where: {
+          ...scope,
           createdAt: {
             gte: start,
             lte: end,
@@ -1094,6 +1140,7 @@ export async function getDailyLedgerDetails(date: string | Date, userRole?: stri
       }),
       prisma.expense.findMany({
         where: {
+          ...scope,
           createdAt: {
             gte: start,
             lte: end,

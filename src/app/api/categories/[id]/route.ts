@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getScopeWhere } from '@/lib/dataScope';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,6 +14,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const { id } = await params;
     const body = await req.json();
+    const scope = await getScopeWhere();
+
+    const existing = await prisma.category.findFirst({ where: { id, ...scope }, select: { id: true } });
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
+    }
 
     const slug = body.name ? body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') : undefined;
 
@@ -46,9 +53,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     }
 
     const { id } = await params;
-    await prisma.category.delete({
-      where: { id },
+    const scope = await getScopeWhere();
+    const { count } = await prisma.category.deleteMany({
+      where: { id, ...scope },
     });
+    if (count === 0) {
+      return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
+    }
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Category DELETE error:', error);

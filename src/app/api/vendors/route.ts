@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getScopeWhere } from '@/lib/dataScope';
 
 export async function GET() {
   try {
+    const scope = await getScopeWhere();
     const vendors = await prisma.vendor.findMany({
+      where: scope,
       orderBy: { name: 'asc' },
     });
 
@@ -34,6 +37,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Vendor name is required' }, { status: 400 });
     }
 
+    const scope = await getScopeWhere();
     const newVendor = await prisma.vendor.create({
       data: {
         name: body.name.trim(),
@@ -42,6 +46,7 @@ export async function POST(req: Request) {
         phone: body.phone || '',
         address: body.address || '',
         status: body.status || 'Active',
+        isDemo: scope.isDemo,
       },
     });
 

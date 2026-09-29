@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma';
+import { getScopeWhere } from '@/lib/dataScope';
 
 export interface ICategoryOverview {
   _id: string;
@@ -34,12 +35,15 @@ export interface IDashboardStats {
 
 export async function getDashboardStats(): Promise<IDashboardStats> {
   try {
+    const scope = await getScopeWhere();
     const products = await prisma.product.findMany({
+      where: scope,
       include: { category: true },
     });
 
-    const categories = await prisma.category.findMany();
+    const categories = await prisma.category.findMany({ where: scope });
     const logs = await prisma.inventoryLog.findMany({
+      where: scope,
       orderBy: { timestamp: 'desc' },
       take: 10,
     });

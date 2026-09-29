@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { getScopeWhere } from '@/lib/dataScope';
 
 function formatInvoice(inv: any) {
   if (!inv) return null;
@@ -25,7 +26,7 @@ function formatInvoice(inv: any) {
 
 export async function getInvoices(status?: string) {
   try {
-    const where: any = {};
+    const where: any = { ...(await getScopeWhere()) };
     if (status && status !== 'All') {
       where.paymentStatus = status;
     }
@@ -50,12 +51,26 @@ export async function createInvoice(data: any, userRole?: string) {
     throw new Error('403 Unauthorized: Staff role cannot create invoices.');
   }
   try {
-    const count = await prisma.invoice.count();
+    const scope = await getScopeWhere();
+    const count = await prisma.invoice.count({ where: scope });
     const invoiceNumber = `INV-2026-${String(count + 1).padStart(3, '0')}`;
+
+    const itemProductIds: string[] = (data.items || [])
+      .map((item: any) => item.product)
+      .filter(Boolean);
+    if (itemProductIds.length > 0) {
+      const inScope = await prisma.product.count({
+        where: { id: { in: itemProductIds }, ...scope },
+      });
+      if (inScope !== new Set(itemProductIds).size) {
+        throw new Error('One or more invoice items reference unknown products.');
+      }
+    }
 
     const newInvoice = await prisma.invoice.create({
       data: {
         invoiceNumber,
+        isDemo: scope.isDemo,
         customerName: data.customer.name,
         customerPhone: data.customer.phone || '',
         customerEmail: data.customer.email || '',
@@ -88,7 +103,7 @@ export async function createInvoice(data: any, userRole?: string) {
     for (const item of data.items || []) {
       if (item.product) {
         const product = await prisma.product
-          .findUnique({ where: { id: item.product } })
+          .findFirst({ where: { id: item.product, ...scope } })
           .catch(() => null);
 
         if (product) {
@@ -111,6 +126,7 @@ export async function createInvoice(data: any, userRole?: string) {
                 remaining: newStock,
                 reason: `Sale #${invoiceNumber}`,
                 performedBy: 'Admin User',
+                isDemo: scope.isDemo,
               },
             })
             .catch(() => {});
@@ -134,6 +150,10 @@ export async function updateInvoiceStatus(id: string, status: string, userRole?:
     throw new Error('403 Unauthorized: Staff role cannot update invoice status.');
   }
   try {
+    const scope = await getScopeWhere();
+    const existing = await prisma.invoice.findFirst({ where: { id, ...scope }, select: { id: true } });
+    if (!existing) throw new Error('Invoice not found');
+
     const updated = await prisma.invoice.update({
       where: { id },
       data: { paymentStatus: status },

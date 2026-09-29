@@ -8,7 +8,13 @@ import { AuthProvider } from '@/lib/authContext';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage = pathname === '/auth';
+  const isAuthPage =
+    pathname === '/auth' ||
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/pending' ||
+    pathname === '/forgot-password' ||
+    pathname === '/update-password';
 
   if (isAuthPage) {
     return (

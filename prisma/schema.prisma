@@ -15,15 +15,24 @@ enum Role {
   CUSTOMER
 }
 
+// `isDemo` partitions every business table into two isolated datasets:
+// demo accounts (@example.com) only ever read/write rows where isDemo = true,
+// real accounts only ever read/write rows where isDemo = false.
+
 model Category {
   id           String    @id @default(cuid())
-  name         String    @unique
-  slug         String    @unique
+  name         String
+  slug         String
   description  String?
   productCount Int       @default(0)
+  isDemo       Boolean   @default(false)
   products     Product[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@unique([name, isDemo])
+  @@unique([slug, isDemo])
+  @@index([isDemo])
 }
 
 model Vendor {
@@ -34,9 +43,12 @@ model Vendor {
   phone         String?
   address       String?
   status        String    @default("Active")
+  isDemo        Boolean   @default(false)
   products      Product[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([isDemo])
 }
 
 model User {
@@ -45,6 +57,8 @@ model User {
   name           String
   email          String   @unique
   role           Role      @default(STAFF)
+  isApproved     Boolean   @default(false)
+  isDemo         Boolean   @default(false)
   avatarUrl      String?
   expenses       Expense[]
   createdAt      DateTime  @default(now())
@@ -54,7 +68,7 @@ model User {
 model Product {
   id               String         @id @default(cuid())
   name             String
-  sku              String         @unique
+  sku              String
   barcode          String?
   categoryId       String
   category         Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -73,15 +87,19 @@ model Product {
   paperGsmOptions  String?
   printSides       String?
   finishTypes      String?
+  isDemo           Boolean        @default(false)
   inventoryLogs    InventoryLog[]
   invoiceItems     InvoiceItem[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+
+  @@unique([sku, isDemo])
+  @@index([isDemo])
 }
 
 model Invoice {
   id              String        @id @default(cuid())
-  invoiceNumber   String        @unique
+  invoiceNumber   String
   customerName    String
   customerPhone   String?
   customerEmail   String?
@@ -94,9 +112,13 @@ model Invoice {
   paymentStatus   String        @default("Pending")
   paymentMethod   String        @default("Cash")
   notes           String?
+  isDemo          Boolean       @default(false)
   items           InvoiceItem[]
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  @@unique([invoiceNumber, isDemo])
+  @@index([isDemo])
 }
 
 model InvoiceItem {
@@ -128,9 +150,12 @@ model InventoryLog {
   reason      String
   referenceId String?
   performedBy String   @default("Admin User")
+  isDemo      Boolean  @default(false)
   timestamp   DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([isDemo])
 }
 
 model PrintingRequest {
@@ -145,8 +170,11 @@ model PrintingRequest {
   estimatedCost   Float
   status          String   @default("Pending")
   notes           String?
+  isDemo          Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([isDemo])
 }
 
 enum PaymentMode {
@@ -160,13 +188,16 @@ model Transaction {
   paymentMode PaymentMode
   note        String?
   isVoid      Boolean     @default(false)
+  isDemo      Boolean     @default(false)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @default(now()) @updatedAt
+
+  @@index([isDemo, createdAt])
 }
 
 model DailyLedger {
   id              String   @id @default(cuid())
-  date            DateTime @unique
+  date            DateTime
   openingBalance  Float    @default(0)
   totalCash       Float
   totalUPI        Float
@@ -175,7 +206,10 @@ model DailyLedger {
   netExpectedCash Float    @default(0)
   isManualEntry   Boolean  @default(false)
   closedByRole    String
+  isDemo          Boolean  @default(false)
   createdAt       DateTime @default(now())
+
+  @@unique([date, isDemo])
 }
 
 model Expense {
@@ -184,14 +218,19 @@ model Expense {
   reason    String
   userId    String?
   addedBy   User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  isDemo    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([isDemo, createdAt])
 }
 
 model QuickNotePreset {
   id        String   @id @default(cuid())
-  text      String   @unique
+  text      String
   order     Int      @default(0)
+  isDemo    Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
 
+  @@unique([text, isDemo])
+}

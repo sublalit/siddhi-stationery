@@ -230,7 +230,8 @@ export default function SettingsPage() {
               <div className="mt-4 text-xs text-slate-600 space-y-3">
                 <p>
                   Populate Database with default stationery items (A4 paper, ballpoint pens, HB pencils,
-                  exercise books), categories, vendors, and invoices matching the Lovable prototype.
+                  exercise books), categories, vendors, and invoices. Only available from demo
+                  (@example.com) accounts and only resets demo data — live store data is never touched.
                 </p>
 
                 <button

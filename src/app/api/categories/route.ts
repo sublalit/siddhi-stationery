@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getScopeWhere } from '@/lib/dataScope';
 
 export async function GET() {
   try {
+    const scope = await getScopeWhere();
     const categories = await prisma.category.findMany({
+      where: scope,
       orderBy: { name: 'asc' },
     });
 
@@ -35,12 +38,14 @@ export async function POST(req: Request) {
     }
 
     const slug = body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const scope = await getScopeWhere();
 
     const newCategory = await prisma.category.create({
       data: {
         name: body.name.trim(),
         slug,
         description: body.description || '',
+        isDemo: scope.isDemo,
       },
     });
 

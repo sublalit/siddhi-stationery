@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma';
 import { Role } from '@prisma/client';
+import { isDemoEmail } from '@/lib/dataScope';
+import { ensureDemoDataset } from '@/lib/demoSeed';
 
 export async function seedDemoUsers() {
   try {
@@ -38,16 +40,19 @@ export async function seedDemoUsers() {
             name: demo.name,
             role: demo.role,
             avatarUrl: demo.avatarUrl,
+            isApproved: true,
+            isDemo: true,
           },
         });
-      } else if (existing.role !== demo.role) {
+      } else if (existing.role !== demo.role || !existing.isApproved || !existing.isDemo) {
         await prisma.user.update({
           where: { email: demo.email },
-          data: { role: demo.role },
+          data: { role: demo.role, isApproved: true, isDemo: true },
         });
       }
     }
 
+    await ensureDemoDataset();
     return { success: true };
   } catch (error: any) {
     console.error('seedDemoUsers error:', error);
@@ -66,6 +71,11 @@ export async function syncUserRole(email: string, requestedRole?: string, name?:
       roleEnum = Role.STAFF;
     }
 
+    const isDemo = isDemoEmail(email);
+    if (isDemo) {
+      await ensureDemoDataset().catch((err) => console.error('ensureDemoDataset error:', err));
+    }
+
     const existing = await prisma.user.findUnique({
       where: { email },
     });
@@ -75,6 +85,7 @@ export async function syncUserRole(email: string, requestedRole?: string, name?:
         where: { email },
         data: {
           supabaseAuthId: supabaseAuthId || existing.supabaseAuthId,
+          ...(isDemo ? { isDemo: true } : {}),
         },
       });
       return {
@@ -83,6 +94,7 @@ export async function syncUserRole(email: string, requestedRole?: string, name?:
         name: updated.name,
         role: updated.role,
         avatarUrl: updated.avatarUrl,
+        isApproved: updated.isApproved,
       };
     }
 
@@ -92,6 +104,8 @@ export async function syncUserRole(email: string, requestedRole?: string, name?:
         name: name || email.split('@')[0],
         role: roleEnum,
         supabaseAuthId: supabaseAuthId || null,
+        isApproved: false,
+        isDemo,
       },
     });
 
@@ -101,6 +115,7 @@ export async function syncUserRole(email: string, requestedRole?: string, name?:
       name: created.name,
       role: created.role,
       avatarUrl: created.avatarUrl,
+      isApproved: created.isApproved,
     };
   } catch (error: any) {
     console.error('syncUserRole error:', error);
@@ -113,6 +128,7 @@ export async function syncUserRole(email: string, requestedRole?: string, name?:
       name: email.split('@')[0],
       role: fallbackRole,
       avatarUrl: null,
+      isApproved: false,
     };
   }
 }
@@ -128,6 +144,7 @@ export async function getUserProfile(email?: string | null, supabaseAuthId?: str
           name: byAuthId.name,
           role: byAuthId.role,
           avatarUrl: byAuthId.avatarUrl,
+          isApproved: byAuthId.isApproved,
         };
       }
     }
@@ -141,6 +158,7 @@ export async function getUserProfile(email?: string | null, supabaseAuthId?: str
           name: byEmail.name,
           role: byEmail.role,
           avatarUrl: byEmail.avatarUrl,
+          isApproved: byEmail.isApproved,
         };
       }
     }
