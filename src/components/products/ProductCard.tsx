@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Eye, Edit3, Trash2, Clock, TrendingUp, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, Edit3, Trash2, Clock, TrendingUp, ShieldAlert, X, ZoomIn } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 
 interface ProductCardProps {
@@ -22,6 +22,19 @@ export default function ProductCard({
   onOpenPrices,
 }: ProductCardProps) {
   const { isStaff } = useAuth();
+  const [isImageOpen, setIsImageOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isImageOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsImageOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isImageOpen]);
+
   const stock = Number(product.currentStock) || 0;
   const minStock = Number(product.minStock) || 5;
   const sellingPrice = (Number(product.sellingPrice) || 0).toFixed(2);
@@ -38,18 +51,39 @@ export default function ProductCard({
   }
 
   const categoryName = product.category?.name || 'Paper Products';
+  const imageUrl = product.imageUrl || 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&auto=format&fit=crop';
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
-      <div>
-        {/* Product Image */}
-        <div className="relative w-full h-44 bg-slate-100 overflow-hidden">
-          <img
-            src={product.imageUrl || 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=500&auto=format&fit=crop'}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        </div>
+    <>
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
+        <div>
+          {/* Product Image - Clickable to open zoom modal */}
+          <div
+            className="relative w-full h-44 bg-slate-100 overflow-hidden cursor-pointer group"
+            onClick={() => setIsImageOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsImageOpen(true);
+              }
+            }}
+            title="Click to zoom image"
+          >
+            <img
+              src={imageUrl}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            {/* Subtle zoom hint overlay on hover */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm backdrop-blur-xs">
+                <ZoomIn className="w-3.5 h-3.5" />
+                Zoom
+              </span>
+            </div>
+          </div>
 
         {/* Product Info */}
         <div className="p-4 space-y-2">
@@ -150,5 +184,47 @@ export default function ProductCard({
         </div>
       </div>
     </div>
+
+    {/* Lightbox / Zoom Modal */}
+    {isImageOpen && (
+      <div
+        className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs transition-opacity duration-200"
+          onClick={() => setIsImageOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Enlarged image of ${product.name}`}
+        >
+          {/* Close (X) Button in Top-Right Corner */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsImageOpen(false);
+            }}
+            className="absolute top-4 right-4 p-2.5 text-white/80 hover:text-white bg-black/50 hover:bg-black/80 rounded-full transition-colors cursor-pointer z-10 focus:outline-hidden"
+            aria-label="Close image zoom"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          {/* Centered Image Keeping Aspect Ratio Intact */}
+          <div
+            className="relative max-w-5xl max-h-[85vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={imageUrl}
+              alt={product.name}
+              className="max-w-full max-h-[80vh] w-auto h-auto object-contain rounded-xl shadow-2xl select-none"
+            />
+            {product.name && (
+              <p className="mt-3 px-3 py-1.5 bg-black/60 rounded-lg text-white text-xs sm:text-sm font-medium text-center truncate max-w-md">
+                {product.name}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
